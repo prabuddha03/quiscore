@@ -12,7 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Team, Score } from "@prisma/client";
 import { useState, useEffect } from "react";
-import { Eye } from "lucide-react";
+import { Eye, Check, X, Minus } from "lucide-react";
 
 interface QuestionViewModalProps {
   teams: Team[];
@@ -31,23 +31,23 @@ export function QuestionViewModal({ teams, questionId, questionNumber }: Questio
   const [questionScores, setQuestionScores] = useState<QuestionScore[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchQuestionScores = async () => {
-    if (!open) return;
-    
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/question/${questionId}/scores`);
-      if (res.ok) {
-        const data = await res.json();
-        setQuestionScores(data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch question scores:", error);
-    }
-    setLoading(false);
-  };
-
   useEffect(() => {
+    const fetchQuestionScores = async () => {
+      if (!open) return;
+      
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/question/${questionId}/scores`);
+        if (res.ok) {
+          const data = await res.json();
+          setQuestionScores(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch question scores:", error);
+      }
+      setLoading(false);
+    };
+
     if (open) {
       fetchQuestionScores();
     }
@@ -56,45 +56,18 @@ export function QuestionViewModal({ teams, questionId, questionNumber }: Questio
   const getScoreForTeam = (teamId: string) => {
     return questionScores.find(score => score.teamId === teamId);
   };
-
+  
   const getMethodDisplay = (method: string) => {
-    switch (method) {
-      case 'direct':
-        return 'Direct Answer';
-      case 'pounce-right':
-        return 'Pounce (Correct)';
-      case 'pounce-wrong':
-        return 'Pounce (Wrong)';
-      case 'bounce':
-        return 'Bounce';
-      case 'custom':
-        return 'Custom';
-      default:
-        return method;
-    }
+    if (!method) return null;
+    const color = method.toLowerCase().includes('pounce') ? "bg-blue-500/20 text-blue-300" 
+                 : method.toLowerCase().includes('bounce') ? "bg-purple-500/20 text-purple-300"
+                 : "bg-gray-500/20 text-gray-300";
+    return <Badge variant="outline" className={`border-0 ${color}`}>{method.charAt(0).toUpperCase() + method.slice(1)}</Badge>;
   };
 
-  const getMethodColor = (method: string) => {
-    switch (method) {
-      case 'direct':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'pounce-right':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'pounce-wrong':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'bounce':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'custom':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getScoreColor = (points: number) => {
-    if (points > 0) return 'text-green-600 bg-green-50';
-    if (points < 0) return 'text-red-600 bg-red-50';
-    return 'text-gray-600 bg-gray-50';
+  const getScoreDisplay = (points: number) => {
+    const color = points > 0 ? 'text-green-400' : points < 0 ? 'text-red-400' : 'text-gray-400';
+    return <span className={`font-bold ${color}`}>{points > 0 ? '+' : ''}{points}</span>;
   };
 
   const totalTeamsAnswered = questionScores.length;
@@ -105,80 +78,66 @@ export function QuestionViewModal({ teams, questionId, questionNumber }: Questio
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm" className="flex items-center gap-1">
+        <Button variant="ghost" size="sm" className="text-gray-400 hover:bg-gray-700 hover:text-white">
           <Eye className="h-4 w-4" />
-          View
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl bg-gray-900 border-gray-700 text-white">
         <DialogHeader>
-          <DialogTitle>Question {questionNumber} - Team Performance</DialogTitle>
-          <DialogDescription>
-            View how each team performed on this question
+          <DialogTitle>Question {questionNumber} - Performance</DialogTitle>
+          <DialogDescription className="text-gray-400">
+            A summary of how each team performed on this question.
           </DialogDescription>
         </DialogHeader>
         
         {loading ? (
-          <div className="flex justify-center py-8">
-            <div className="text-muted-foreground">Loading question data...</div>
+          <div className="flex justify-center items-center h-64">
+            <div className="text-gray-400">Loading question data...</div>
           </div>
         ) : (
-          <div className="space-y-6 py-4">
+          <div className="space-y-8 py-4">
             {/* Summary Stats */}
-            <div className="grid grid-cols-4 gap-4">
-              <div className="text-center p-3 border rounded-lg">
-                <div className="text-2xl font-bold">{totalTeamsAnswered}</div>
-                <div className="text-sm text-muted-foreground">Teams Answered</div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center p-4 rounded-lg bg-gray-800 border border-gray-700">
+                <div className="text-3xl font-bold text-white">{totalTeamsAnswered}</div>
+                <div className="text-sm text-gray-400">Answered</div>
               </div>
-              <div className="text-center p-3 border rounded-lg bg-green-50">
-                <div className="text-2xl font-bold text-green-600">{correctAnswers}</div>
-                <div className="text-sm text-muted-foreground">Positive Scores</div>
+              <div className="text-center p-4 rounded-lg bg-green-900/50 border border-green-500/30">
+                <div className="text-3xl font-bold text-green-400">{correctAnswers}</div>
+                <div className="text-sm text-gray-400">Correct</div>
               </div>
-              <div className="text-center p-3 border rounded-lg bg-red-50">
-                <div className="text-2xl font-bold text-red-600">{wrongAnswers}</div>
-                <div className="text-sm text-muted-foreground">Negative Scores</div>
+              <div className="text-center p-4 rounded-lg bg-red-900/50 border border-red-500/30">
+                <div className="text-3xl font-bold text-red-400">{wrongAnswers}</div>
+                <div className="text-sm text-gray-400">Incorrect</div>
               </div>
-              <div className="text-center p-3 border rounded-lg bg-gray-50">
-                <div className="text-2xl font-bold text-gray-600">{neutralAnswers}</div>
-                <div className="text-sm text-muted-foreground">Zero Scores</div>
+              <div className="text-center p-4 rounded-lg bg-gray-800 border border-gray-700">
+                <div className="text-3xl font-bold text-gray-400">{neutralAnswers}</div>
+                <div className="text-sm text-gray-400">Neutral</div>
               </div>
             </div>
 
-            {/* Team Performance */}
+            {/* Team Performance List */}
             <div className="space-y-3">
-              <h4 className="font-semibold">Team Performance</h4>
-              <div className="grid gap-3">
+              <h4 className="font-semibold text-lg text-gray-200">Team Performance</h4>
+              <div className="grid gap-2 max-h-64 overflow-y-auto pr-2">
                 {teams.map((team) => {
                   const score = getScoreForTeam(team.id);
-                  
                   return (
                     <div 
                       key={team.id} 
-                      className={`flex items-center justify-between p-4 border rounded-lg ${
-                        score ? 'bg-white' : 'bg-gray-50 opacity-75'
+                      className={`flex items-center justify-between p-3 rounded-md ${
+                        score ? 'bg-gray-800/70' : 'bg-gray-800/30 text-gray-500'
                       }`}
                     >
                       <div className="font-medium">{team.name}</div>
                       
                       {score ? (
-                        <div className="flex items-center gap-3">
-                          <Badge 
-                            variant="outline" 
-                            className={getMethodColor(score.method)}
-                          >
-                            {getMethodDisplay(score.method)}
-                          </Badge>
-                          <Badge 
-                            variant="outline" 
-                            className={`${getScoreColor(score.points)} font-bold`}
-                          >
-                            {score.points > 0 ? '+' : ''}{score.points}
-                          </Badge>
+                        <div className="flex items-center gap-4">
+                          {getMethodDisplay(score.method)}
+                          <div className="w-12 text-right font-mono text-lg">{getScoreDisplay(score.points)}</div>
                         </div>
                       ) : (
-                        <Badge variant="outline" className="text-gray-500">
-                          No Answer
-                        </Badge>
+                        <span className="text-sm">No Answer</span>
                       )}
                     </div>
                   );
@@ -189,22 +148,17 @@ export function QuestionViewModal({ teams, questionId, questionNumber }: Questio
             {/* Method Breakdown */}
             {totalTeamsAnswered > 0 && (
               <div className="space-y-3">
-                <h4 className="font-semibold">Method Breakdown</h4>
-                <div className="grid grid-cols-2 gap-3">
+                <h4 className="font-semibold text-lg text-gray-200">Method Breakdown</h4>
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                   {Object.entries(
                     questionScores.reduce((acc, score) => {
                       acc[score.method] = (acc[score.method] || 0) + 1;
                       return acc;
                     }, {} as Record<string, number>)
                   ).map(([method, count]) => (
-                    <div key={method} className="flex items-center justify-between p-3 border rounded-lg">
-                      <Badge 
-                        variant="outline" 
-                        className={getMethodColor(method)}
-                      >
-                        {getMethodDisplay(method)}
-                      </Badge>
-                      <span className="font-medium">{count} team{count !== 1 ? 's' : ''}</span>
+                    <div key={method} className="flex items-center justify-between p-3 bg-gray-800/70 rounded-md">
+                      {getMethodDisplay(method)}
+                      <span className="font-medium text-gray-300">{count} team{count !== 1 ? 's' : ''}</span>
                     </div>
                   ))}
                 </div>
@@ -212,12 +166,6 @@ export function QuestionViewModal({ teams, questionId, questionNumber }: Questio
             )}
           </div>
         )}
-
-        <div className="flex justify-end pt-4 border-t">
-          <Button variant="outline" onClick={() => setOpen(false)}>
-            Close
-          </Button>
-        </div>
       </DialogContent>
     </Dialog>
   );

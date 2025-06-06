@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss"
+const colors = require('tailwindcss/colors')
 
 const config: Config = {
   darkMode: ["class"],
@@ -51,7 +52,7 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        orange: "hsl(var(--orange))",
+        orange: colors.orange,
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -74,7 +75,7 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [require("tailwindcss-animate")],
 }
 
 export default config 

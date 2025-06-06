@@ -2,9 +2,11 @@
 
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { Team } from "@prisma/client";
+import { Team, Question } from "@prisma/client";
 import { TeamScoreModal } from "./TeamScoreModal";
 import { QuestionViewModal } from "./QuestionViewModal";
+import { Plus } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface QuestionInputProps {
   roundId: string;
@@ -39,45 +41,50 @@ export function QuestionInput({
       setQuestionNumber(questionNumber + 1);
     } else {
       console.error("Failed to add question");
+      toast.error("A question with this number might already exist in this round.");
     }
     setLoading(false);
   };
 
   return (
-    <div className="mt-4">
-      <div className="flex items-center gap-2 mb-4">
-        <Button onClick={handleAddQuestion} disabled={loading}>
-          {loading ? "Adding..." : `Add Question ${questionNumber}`}
-        </Button>
-      </div>
-      
+    <div className="space-y-4">
       {/* Show existing questions with scoring options */}
       {existingQuestions.length > 0 && (
-        <div className="mt-4">
-          <h5 className="font-medium mb-2">Questions & Scoring:</h5>
-          <div className="space-y-2">
-            {existingQuestions.map((question) => (
-              <div key={question.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
-                <span className="font-medium">Question {question.number}</span>
-                <div className="flex items-center gap-2">
-                  <QuestionViewModal 
-                    teams={teams}
-                    questionId={question.id}
-                    questionNumber={question.number}
-                  />
-                  <TeamScoreModal 
-                    teams={teams} 
-                    questionId={question.id} 
-                    eventId={eventId}
-                    onScoreAdded={onQuestionAdded}
-                    roundId={roundId}
-                  />
-                </div>
+        <div className="space-y-2">
+          {existingQuestions
+            .sort((a, b) => a.number - b.number)
+            .map((question) => (
+            <div key={question.id} className="flex items-center justify-between p-3 rounded-md bg-gray-800/50 border border-gray-700/60">
+              <span className="font-medium text-gray-300">Question {question.number}</span>
+              <div className="flex items-center gap-2">
+                <QuestionViewModal 
+                  teams={teams}
+                  questionId={question.id}
+                  questionNumber={question.number}
+                />
+                <TeamScoreModal 
+                  teams={teams} 
+                  questionId={question.id} 
+                  eventId={eventId}
+                  onScoreAdded={onQuestionAdded}
+                  roundId={roundId}
+                  questionNumber={question.number}
+                />
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       )}
+      
+      <Button 
+        onClick={handleAddQuestion} 
+        disabled={loading}
+        variant="outline"
+        className="w-full border-dashed border-gray-600 text-gray-400 hover:text-white hover:border-gray-500"
+      >
+        <Plus className="h-4 w-4 mr-2" />
+        {loading ? "Adding..." : `Add Question ${questionNumber}`}
+      </Button>
     </div>
   );
 } 

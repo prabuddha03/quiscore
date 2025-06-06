@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
-import { GeistSans } from "geist/font/sans";
+import { Inter } from "next/font/google";
 import "./globals.css";
-import { cn } from "@/lib/utils";
 import { Providers } from "./providers";
-import { Header } from "@/components/Header";
-import { SocketInitializer } from "@/components/SocketInitializer";
+import { Navbar } from "@/components/landing/Navbar";
+import { Footer } from "@/components/landing/Footer";
+import { Toaster } from 'sonner';
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Quiscore",
-  description: "A real-time, scalable quiz scoreboard platform.",
+  title: "QuiScore - Live Scoring for Events & Competitions",
+  description: "The ultimate platform for live scoring your events and competitions. From quizzes to sports tournaments, get real-time results, customizable rules, and a seamless experience.",
 };
 
 // Initialize Socket.IO server on app startup
@@ -24,16 +26,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body
-        className={cn(
-          "min-h-screen bg-background font-sans antialiased",
-          GeistSans.className
-        )}
-      >
+      <body className={`${inter.className} bg-black`}>
         <Providers>
-          <SocketInitializer />
-          <Header />
-          {children}
+          <Toaster richColors theme="dark" />
+          <Navbar />
+          <main className="min-h-screen pt-20">
+            {children}
+          </main>
+          <Footer />
         </Providers>
       </body>
     </html>
