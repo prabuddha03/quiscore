@@ -119,25 +119,25 @@ export function QuestionViewModal({ teams, questionId, questionNumber }: Questio
             {/* Team Performance List */}
             <div className="space-y-3">
               <h4 className="font-semibold text-lg text-gray-200">Team Performance</h4>
-              <div className="grid gap-2 max-h-64 overflow-y-auto pr-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 max-h-60 overflow-y-auto pr-2">
                 {teams.map((team) => {
                   const score = getScoreForTeam(team.id);
                   return (
                     <div 
                       key={team.id} 
-                      className={`flex items-center justify-between p-3 rounded-md ${
+                      className={`flex items-center justify-between p-2 rounded-md ${
                         score ? 'bg-gray-800/70' : 'bg-gray-800/30 text-gray-500'
                       }`}
                     >
-                      <div className="font-medium">{team.name}</div>
+                      <div className="font-medium text-sm">{team.name}</div>
                       
                       {score ? (
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3">
                           {getMethodDisplay(score.method)}
-                          <div className="w-12 text-right font-mono text-lg">{getScoreDisplay(score.points)}</div>
+                          <div className="w-12 text-right font-mono text-base">{getScoreDisplay(score.points)}</div>
                         </div>
                       ) : (
-                        <span className="text-sm">No Answer</span>
+                        <span className="text-xs">No Answer</span>
                       )}
                     </div>
                   );

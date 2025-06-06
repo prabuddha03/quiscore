@@ -11,9 +11,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Team, Round } from "@prisma/client";
+import { Team } from "@prisma/client";
 import { useState, useEffect } from "react";
-import { Plus, Minus, CheckCircle, AlertCircle, Pencil } from "lucide-react";
+import { Plus, Minus, CheckCircle, Pencil } from "lucide-react";
 import { toast } from 'sonner';
 
 interface TeamScoreModalProps {
@@ -32,14 +32,25 @@ interface ExistingScore {
   points: number;
 }
 
+interface RoundRules {
+  pounce: boolean;
+  bounce: boolean;
+  direction: string;
+  scoring: {
+    directRight: number;
+    pounceRight: number;
+    pounceWrong: number;
+    bouncePoints: number;
+  };
+}
+
 export function TeamScoreModal({ teams, questionId, eventId, onScoreAdded, roundId, questionNumber }: TeamScoreModalProps) {
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const [roundRules, setRoundRules] = useState<any>(null);
+  const [roundRules, setRoundRules] = useState<RoundRules | null>(null);
   const [teamScores, setTeamScores] = useState<Record<string, number>>({});
   const [teamMethods, setTeamMethods] = useState<Record<string, string>>({});
-  const [existingScores, setExistingScores] = useState<ExistingScore[]>([]);
   const [isEditMode, setIsEditMode] = useState(false);
 
   useEffect(() => {
@@ -80,7 +91,6 @@ export function TeamScoreModal({ teams, questionId, eventId, onScoreAdded, round
               }
             });
 
-            setExistingScores(scores);
             setIsEditMode(scores.length > 0);
             setTeamMethods(defaultMethods);
             setTeamScores(existingTeamScores);
@@ -94,7 +104,6 @@ export function TeamScoreModal({ teams, questionId, eventId, onScoreAdded, round
         // Reset state when modal is closed
         setTeamScores({});
         setTeamMethods({});
-        setExistingScores([]);
         setIsEditMode(false);
       }
     };
@@ -111,7 +120,7 @@ export function TeamScoreModal({ teams, questionId, eventId, onScoreAdded, round
     setTeamMethods(prev => ({ ...prev, [teamId]: method }));
     
     if (roundRules?.scoring) {
-      const { directRight, pounceRight, pounceWrong, bouncePoints } = roundRules.scoring;
+      const { directRight, pounceRight, bouncePoints } = roundRules.scoring;
       let points = 0;
       
       switch (method) {
