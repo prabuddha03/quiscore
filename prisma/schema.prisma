@@ -102,4 +102,6 @@ model Score {
     questionId String
     method     String // e.g., "direct", "pounce-right", "custom"
     points     Int
+
+    @@unique([teamId, questionId])
 }

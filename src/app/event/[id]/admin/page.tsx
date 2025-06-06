@@ -13,7 +13,9 @@ import { Badge } from "@/components/ui/badge";
 import { Event, Round, Question, Team, Score } from "@prisma/client";
 import { RoundForm } from "@/components/RoundForm";
 import { QuestionInput } from "@/components/QuestionInput";
+import { RoundScoreModal } from "@/components/RoundScoreModal";
 import { ArrowUpDown, Share2, Copy } from "lucide-react";
+import { useSocket } from "@/hooks/use-socket";
 
 type QuestionWithScores = Question & { scores: Score[] };
 type RoundWithQuestions = Round & { questions: QuestionWithScores[] };
@@ -31,6 +33,7 @@ export default function EventAdminPage({
   const { id } = use(params);
   const [event, setEvent] = useState<EventWithRelations | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const { socket, isConnected } = useSocket(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000');
 
   const fetchEvent = async () => {
     const res = await fetch(`/api/event/${id}`);
@@ -44,6 +47,22 @@ export default function EventAdminPage({
     fetchEvent();
   }, [id]);
 
+  useEffect(() => {
+    if (socket && isConnected) {
+      socket.emit("join-room", `event_${id}`);
+      
+      socket.on("score-updated", () => {
+        console.log("Score updated via socket");
+        fetchEvent();
+      });
+
+      return () => {
+        socket.off("score-updated");
+        socket.emit("leave-room", `event_${id}`);
+      };
+    }
+  }, [socket, isConnected, id]);
+
   const calculateTotalScore = (scores: Score[] | undefined) => {
     if (!scores || scores.length === 0) {
       return 0;
@@ -56,6 +75,20 @@ export default function EventAdminPage({
     const scoreB = calculateTotalScore(b.scores);
     return sortOrder === "desc" ? scoreB - scoreA : scoreA - scoreB;
   }) || [];
+
+  const handleSortChange = () => {
+    const newSortOrder = sortOrder === "desc" ? "asc" : "desc";
+    setSortOrder(newSortOrder);
+    
+    // Emit sort order change via Socket.IO
+    if (socket && isConnected) {
+      socket.emit("sort-order-changed", {
+        eventId: id,
+        sortOrder: newSortOrder
+      });
+      console.log(`Emitted sort-order-changed: ${newSortOrder} for event ${id}`);
+    }
+  };
 
   const handleShare = async () => {
     const publicUrl = `${window.location.origin}/event/${id}/scoreboard`;
@@ -96,15 +129,20 @@ export default function EventAdminPage({
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle>Live Scoreboard</CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSortOrder(sortOrder === "desc" ? "asc" : "desc")}
-              className="flex items-center gap-2"
-            >
-              <ArrowUpDown className="h-4 w-4" />
-              Sort {sortOrder === "desc" ? "Ascending" : "Descending"}
-            </Button>
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-muted-foreground">
+                {isConnected ? "🟢 Connected" : "🔴 Connecting..."}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSortChange}
+                className="flex items-center gap-2"
+              >
+                <ArrowUpDown className="h-4 w-4" />
+                Sort {sortOrder === "desc" ? "Ascending" : "Descending"}
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -142,7 +180,14 @@ export default function EventAdminPage({
             <RoundForm eventId={event.id} onRoundCreated={fetchEvent} />
             {event.rounds.map((round) => (
               <div key={round.id} className="mt-6 border-t pt-4">
-                <h4 className="text-md font-semibold mb-2">{round.name}</h4>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-md font-semibold">{round.name}</h4>
+                  <RoundScoreModal 
+                    roundId={round.id}
+                    roundName={round.name}
+                    teams={event.teams}
+                  />
+                </div>
                 {round.questions.length > 0 && (
                   <div className="mb-2">
                     <p className="text-sm text-muted-foreground">

@@ -3,7 +3,8 @@
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Team } from "@prisma/client";
-import { ScoreModal } from "./ScoreModal";
+import { TeamScoreModal } from "./TeamScoreModal";
+import { QuestionViewModal } from "./QuestionViewModal";
 
 interface QuestionInputProps {
   roundId: string;
@@ -56,15 +57,22 @@ export function QuestionInput({
           <h5 className="font-medium mb-2">Questions & Scoring:</h5>
           <div className="space-y-2">
             {existingQuestions.map((question) => (
-              <div key={question.id} className="flex items-center justify-between p-2 border rounded">
-                <span>Question {question.number}</span>
-                <ScoreModal 
-                  teams={teams} 
-                  questionId={question.id} 
-                  eventId={eventId}
-                  onScoreAdded={onQuestionAdded}
-                  roundId={roundId}
-                />
+              <div key={question.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+                <span className="font-medium">Question {question.number}</span>
+                <div className="flex items-center gap-2">
+                  <QuestionViewModal 
+                    teams={teams}
+                    questionId={question.id}
+                    questionNumber={question.number}
+                  />
+                  <TeamScoreModal 
+                    teams={teams} 
+                    questionId={question.id} 
+                    eventId={eventId}
+                    onScoreAdded={onQuestionAdded}
+                    roundId={roundId}
+                  />
+                </div>
               </div>
             ))}
           </div>
