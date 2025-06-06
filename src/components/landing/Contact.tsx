@@ -8,12 +8,18 @@ import { Label } from '@/components/ui/label';
 import { useForm } from 'react-hook-form';
 import { useState } from 'react';
 
+interface FormData {
+  name: string;
+  email: string;
+  message: string;
+}
+
 export function Contact() {
-  const { register, handleSubmit, formState: { errors }, reset } = useForm();
+  const { register, handleSubmit, formState: { errors }, reset } = useForm<FormData>();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const onSubmit = async (data) => {
+  const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
     // Here you would typically send the data to a backend endpoint
     // For this example, we'll simulate a network request
@@ -77,7 +83,7 @@ export function Contact() {
                             className="bg-gray-800 border-gray-700 text-white mt-2"
                             {...register('message', { required: 'Message is required' })}
                         />
-                        {errors.message && <p className="text-red-500 text-sm mt-1">{errors.message.message}</p>}
+                        {errors.message && <p className="text-red-500 text-sm mt-1">{errors.message.message as string}</p>}
                     </div>
                     <div className="text-center">
                         <Button 
@@ -91,7 +97,7 @@ export function Contact() {
                     </div>
                      {isSuccess && (
                         <p className="text-green-500 text-center mt-4">
-                            Message sent successfully! We'll get back to you soon.
+                            Message sent successfully! We&apos;ll get back to you soon.
                         </p>
                     )}
                 </form>

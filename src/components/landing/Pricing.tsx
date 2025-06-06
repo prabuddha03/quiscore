@@ -23,7 +23,7 @@ const pricingPlans = [
   },
   {
     name: 'Pro',
-    price: '$19',
+    price: '$3',
     pricePeriod: '/event',
     description: 'For professional organizers and larger events.',
     features: [

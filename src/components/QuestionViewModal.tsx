@@ -12,15 +12,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Team, Score } from "@prisma/client";
 import { useState, useEffect } from "react";
-import { Eye, Check, X, Minus } from "lucide-react";
+import { Eye } from "lucide-react";
 
 interface QuestionViewModalProps {
   teams: Team[];
   questionId: string;
   questionNumber: number;
 }
-
-type TeamWithScores = Team & { scores: Score[] };
 
 interface QuestionScore extends Score {
   team: Team;

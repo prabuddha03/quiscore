@@ -105,4 +105,3 @@ model Score {
 
     @@unique([teamId, questionId])
 }
- 

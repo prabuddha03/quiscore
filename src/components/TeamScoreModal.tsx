@@ -60,7 +60,7 @@ export function TeamScoreModal({ teams, questionId, eventId, onScoreAdded, round
           const res = await fetch(`/api/round/${roundId}`);
           if (res.ok) {
             const data = await res.json();
-            setRoundRules(data.rules);
+            setRoundRules(data.rules as RoundRules);
           }
         } catch (error) {
           console.error("Failed to fetch round rules:", error);

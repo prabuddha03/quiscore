@@ -1,10 +1,9 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useState, useCallback } from "react";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -25,6 +24,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { QRCodeModal } from "@/components/QRCodeModal";
+import { EditRoundModal } from "@/components/EditRoundModal";
 
 // Types
 type QuestionWithScores = Question & { scores: Score[] };
@@ -55,17 +55,17 @@ export default function EventAdminPage({
     }
   }, [id]);
 
-  const fetchEvent = async () => {
+  const fetchEvent = useCallback(async () => {
     const res = await fetch(`/api/event/${id}`);
     if (res.ok) {
       const data = await res.json();
       setEvent(data);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchEvent();
-  }, [id]);
+  }, [fetchEvent]);
 
   useEffect(() => {
     if (event?.rounds && event.rounds.length > 0) {
@@ -74,7 +74,7 @@ export default function EventAdminPage({
       const lastRoundId = event.rounds[event.rounds.length - 1]?.id;
       setOpenAccordionId(lastRoundId);
     }
-  }, [event?.rounds.length]); // Only re-run when the number of rounds changes
+  }, [event?.rounds]); // Only re-run when the number of rounds changes
 
   useEffect(() => {
     if (socket && isConnected) {
@@ -90,7 +90,7 @@ export default function EventAdminPage({
         socket.emit("leave-room", `event_${id}`);
       };
     }
-  }, [socket, isConnected, id]);
+  }, [socket, isConnected, id, fetchEvent]);
 
   const calculateTotalScore = (scores: Score[] | undefined) => {
     if (!scores || scores.length === 0) return 0;
@@ -219,11 +219,14 @@ export default function EventAdminPage({
                         <AccordionTrigger className="px-4 py-3 hover:no-underline">
                           <div className="flex items-center justify-between w-full">
                             <h4 className="text-md font-semibold text-gray-200">{round.name}</h4>
-                             <RoundScoreModal 
-                                roundId={round.id}
-                                roundName={round.name}
-                                teams={event.teams}
-                              />
+                            <div className="flex items-center gap-2">
+                                <EditRoundModal round={round} onRoundUpdated={fetchEvent} />
+                                <RoundScoreModal 
+                                    roundId={round.id}
+                                    roundName={round.name}
+                                    teams={event.teams}
+                                />
+                            </div>
                           </div>
                         </AccordionTrigger>
                         <AccordionContent className="p-4 pt-0">

@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useState, useCallback } from "react";
 import {
   Card,
   CardContent,
@@ -11,8 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import { Event, Team, Score, Round, Question } from "@prisma/client";
 import { useSocket } from "@/hooks/use-socket";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy } from "lucide-react";
+import { Medal } from "lucide-react";
 import { RoundScoreModal } from "@/components/RoundScoreModal";
+import Link from "next/link";
 
 type QuestionWithScores = Question & { scores: Score[] };
 type RoundWithQuestions = Round & { questions: QuestionWithScores[] };
@@ -32,17 +33,17 @@ export default function ScoreboardPage({
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const { socket, isConnected } = useSocket(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000');
 
-  const fetchEvent = async () => {
+  const fetchEvent = useCallback(async () => {
     const res = await fetch(`/api/event/${id}`);
     if (res.ok) {
       const data = await res.json();
       setEvent(data);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchEvent();
-  }, [id]);
+  }, [fetchEvent]);
 
   useEffect(() => {
     if (socket && isConnected) {
@@ -64,7 +65,7 @@ export default function ScoreboardPage({
         socket.emit("leave-room", `event_${id}`);
       };
     }
-  }, [socket, isConnected, id]);
+  }, [socket, isConnected, id, fetchEvent]);
 
   const calculateTotalScore = (scores: Score[] | undefined) => {
     if (!scores || scores.length === 0) return 0;
@@ -87,12 +88,26 @@ export default function ScoreboardPage({
 
   const getPodiumClass = (index: number) => {
     switch (index) {
-      case 0: return "border-orange-400 bg-orange-400/10";
-      case 1: return "border-gray-400 bg-gray-400/10";
-      case 2: return "border-yellow-700 bg-yellow-700/10";
+      case 0: return "border-yellow-400 bg-yellow-400/10";
+      case 1: return "border-slate-400 bg-slate-400/10";
+      case 2: return "border-orange-700 bg-orange-700/10";
       default: return "border-white/10 bg-gray-900/50";
     }
   };
+
+  const getMedal = (index: number) => {
+    if (index === 0) return <Medal className="h-5 w-5 text-yellow-400" />;
+    if (index === 1) return <Medal className="h-5 w-5 text-slate-400" />;
+    if (index === 2) return <Medal className="h-5 w-5 text-orange-700" />;
+    return null;
+  };
+
+  const getScoreColor = (index: number) => {
+    if (index === 0) return "text-yellow-400";
+    if (index === 1) return "text-slate-400";
+    if (index === 2) return "text-orange-700";
+    return "text-white";
+  }
 
   return (
     <div className="bg-black min-h-screen text-white">
@@ -113,28 +128,29 @@ export default function ScoreboardPage({
         <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           <AnimatePresence>
             {sortedTeams.map((team, index) => (
-              <motion.div
-                key={team.id}
-                layout
-                initial={{ opacity: 0, y: 50, scale: 0.9 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.5 }}
-                transition={{ duration: 0.5, type: "spring" }}
-                className={`p-1 rounded-lg ${getPodiumClass(index)}`}
-              >
-                <Card className="bg-transparent border-0 text-white h-full">
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-xl font-medium">{team.name}</CardTitle>
-                    {index < 3 && <Trophy className="h-5 w-5 text-orange-400" />}
-                  </CardHeader>
-                  <CardContent className="text-center">
-                    <p className="text-6xl font-bold text-orange-400">
-                      {calculateTotalScore(team.scores)}
-                    </p>
-                    <Badge className="mt-2 bg-gray-700 text-gray-300 border-0">Rank #{index + 1}</Badge>
-                  </CardContent>
-                </Card>
-              </motion.div>
+              <Link key={team.id} href={`/event/${id}/scoreboard/${team.id}`} passHref>
+                <motion.div
+                  layout
+                  initial={{ opacity: 0, y: 50, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.5 }}
+                  transition={{ duration: 0.5, type: "spring" }}
+                  className={`p-1 rounded-lg ${getPodiumClass(index)} h-full cursor-pointer hover:scale-105 transform-gpu`}
+                >
+                  <Card className="bg-transparent border-0 text-white h-full">
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                      <CardTitle className="text-xl font-medium">{team.name}</CardTitle>
+                      {getMedal(index)}
+                    </CardHeader>
+                    <CardContent className="text-center">
+                      <p className={`text-6xl font-bold ${getScoreColor(index)}`}>
+                        {calculateTotalScore(team.scores)}
+                      </p>
+                      <Badge className="mt-2 bg-gray-700 text-gray-300 border-0">Rank #{index + 1}</Badge>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </Link>
             ))}
           </AnimatePresence>
         </motion.div>

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -37,5 +38,33 @@ export async function GET(
       { error: "Failed to fetch round" },
       { status: 500 }
     );
+  }
+}
+
+export async function PUT(
+  request: Request,
+  { params }: { params: any }
+) {
+  try {
+    const { id } = params;
+    const body = await request.json();
+    const { name, rules } = body;
+
+    if (!name || !rules) {
+        return NextResponse.json({ error: "Missing name or rules" }, { status: 400 });
+    }
+
+    const updatedRound = await prisma.round.update({
+      where: { id },
+      data: {
+        name,
+        rules,
+      },
+    });
+
+    return NextResponse.json(updatedRound);
+  } catch (error) {
+    console.error(`Failed to update round ${params.id}:`, error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 } 

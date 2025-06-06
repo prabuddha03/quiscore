@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Team, Round } from "@prisma/client";
+import { Team } from "@prisma/client";
 import { useState, useEffect } from "react";
 
 interface ScoreModalProps {
@@ -30,13 +30,24 @@ interface ScoreModalProps {
   roundId?: string;
 }
 
+type RoundRules = {
+  pounce?: boolean;
+  bounce?: boolean;
+  scoring?: {
+    directRight?: number;
+    pounceRight?: number;
+    pounceWrong?: number;
+    bouncePoints?: number;
+  };
+};
+
 export function ScoreModal({ teams, questionId, eventId, onScoreAdded, roundId }: ScoreModalProps) {
   const [selectedTeam, setSelectedTeam] = useState("");
   const [points, setPoints] = useState(0);
   const [method, setMethod] = useState("direct");
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
-  const [roundRules, setRoundRules] = useState<any>(null);
+  const [roundRules, setRoundRules] = useState<RoundRules | null>(null);
   const [customPoints, setCustomPoints] = useState([5, 10, 15, 20]);
 
   useEffect(() => {
@@ -109,56 +120,64 @@ export function ScoreModal({ teams, questionId, eventId, onScoreAdded, roundId }
     if (roundRules?.scoring) {
       const { directRight, pounceRight, pounceWrong, bouncePoints } = roundRules.scoring;
       
-      buttons.push(
-        <Button
-          key="direct"
-          variant="outline"
-          size="sm"
-          onClick={() => handleQuickScore(directRight, "direct")}
-          className="bg-green-50 hover:bg-green-100 border-green-200"
-        >
-          Direct (+{directRight})
-        </Button>
-      );
-
-      if (roundRules.pounce) {
+      if (directRight !== undefined) {
         buttons.push(
           <Button
-            key="pounce-right"
+            key="direct"
             variant="outline"
             size="sm"
-            onClick={() => handleQuickScore(pounceRight, "pounce-right")}
-            className="bg-blue-50 hover:bg-blue-100 border-blue-200"
+            onClick={() => handleQuickScore(directRight, "direct")}
+            className="bg-green-50 hover:bg-green-100 border-green-200"
           >
-            Pounce Right (+{pounceRight})
-          </Button>
-        );
-        
-        buttons.push(
-          <Button
-            key="pounce-wrong"
-            variant="outline"
-            size="sm"
-            onClick={() => handleQuickScore(pounceWrong, "pounce-wrong")}
-            className="bg-red-50 hover:bg-red-100 border-red-200"
-          >
-            Pounce Wrong ({pounceWrong})
+            Direct (+{directRight})
           </Button>
         );
       }
 
+      if (roundRules.pounce) {
+        if (pounceRight !== undefined) {
+          buttons.push(
+            <Button
+              key="pounce-right"
+              variant="outline"
+              size="sm"
+              onClick={() => handleQuickScore(pounceRight, "pounce-right")}
+              className="bg-blue-50 hover:bg-blue-100 border-blue-200"
+            >
+              Pounce Right (+{pounceRight})
+            </Button>
+          );
+        }
+        
+        if (pounceWrong !== undefined) {
+          buttons.push(
+            <Button
+              key="pounce-wrong"
+              variant="outline"
+              size="sm"
+              onClick={() => handleQuickScore(pounceWrong, "pounce-wrong")}
+              className="bg-red-50 hover:bg-red-100 border-red-200"
+            >
+              Pounce Wrong ({pounceWrong})
+            </Button>
+          );
+        }
+      }
+
       if (roundRules.bounce) {
-        buttons.push(
-          <Button
-            key="bounce"
-            variant="outline"
-            size="sm"
-            onClick={() => handleQuickScore(bouncePoints, "bounce")}
-            className="bg-yellow-50 hover:bg-yellow-100 border-yellow-200"
-          >
-            Bounce (+{bouncePoints})
-          </Button>
-        );
+        if (bouncePoints !== undefined) {
+          buttons.push(
+            <Button
+              key="bounce"
+              variant="outline"
+              size="sm"
+              onClick={() => handleQuickScore(bouncePoints, "bounce")}
+              className="bg-yellow-50 hover:bg-yellow-100 border-yellow-200"
+            >
+              Bounce (+{bouncePoints})
+            </Button>
+          );
+        }
       }
     }
 

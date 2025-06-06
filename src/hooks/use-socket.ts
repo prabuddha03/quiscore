@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from "react";
 import io from "socket.io-client";
 
@@ -99,7 +100,7 @@ export const useSocket = (serverPath: string) => {
         socket.close();
       }
     };
-  }, [serverPath]);
+  }, [serverPath, socket]);
 
   return { socket, isConnected };
 }; 

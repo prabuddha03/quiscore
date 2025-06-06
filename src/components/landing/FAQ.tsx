@@ -31,7 +31,16 @@ const faqs = [
   },
 ];
 
-function FaqItem({ faq, isOpen, onClick }) {
+interface FaqItemProps {
+  faq: {
+    question: string;
+    answer: string;
+  };
+  isOpen: boolean;
+  onClick: () => void;
+}
+
+function FaqItem({ faq, isOpen, onClick }: FaqItemProps) {
   return (
     <motion.div 
       className="border-b border-white/10"
@@ -67,9 +76,9 @@ function FaqItem({ faq, isOpen, onClick }) {
 }
 
 export function Faq() {
-  const [openIndex, setOpenIndex] = useState(null);
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
 
-  const handleClick = (index) => {
+  const handleClick = (index: number) => {
     setOpenIndex(openIndex === index ? null : index);
   };
 

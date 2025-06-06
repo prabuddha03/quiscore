@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { Team, Question } from "@prisma/client";
+import { Team } from "@prisma/client";
 import { TeamScoreModal } from "./TeamScoreModal";
 import { QuestionViewModal } from "./QuestionViewModal";
 import { Plus } from 'lucide-react';

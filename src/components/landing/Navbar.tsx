@@ -2,12 +2,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useSession, signOut } from 'next-auth/react';
 import { Menu, X, Zap } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { UserAuth } from '../auth/UserAuth';
 
 export function Navbar() {
-  const { data: session } = useSession();
   const [isOpen, setIsOpen] = useState(false);
 
   const navLinks = [
@@ -43,18 +41,7 @@ export function Navbar() {
             </div>
           </div>
           <div className="hidden md:flex items-center gap-4">
-              {session ? (
-                <>
-                  <Link href="/dashboard">
-                    <Button variant="outline" className="border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-black">Dashboard</Button>
-                  </Link>
-                  <Button onClick={() => signOut()} variant="ghost">Sign Out</Button>
-                </>
-              ) : (
-                <Link href="/api/auth/signin">
-                  <Button className="bg-orange-500 text-black hover:bg-orange-600">Sign In</Button>
-                </Link>
-              )}
+              <UserAuth />
           </div>
           <div className="-mr-2 flex md:hidden">
             <button
@@ -87,18 +74,7 @@ export function Navbar() {
           </div>
           <div className="pt-4 pb-3 border-t border-gray-700">
              <div className="flex items-center px-5">
-                {session ? (
-                    <div className='w-full flex flex-col gap-2'>
-                        <Link href="/dashboard" className='w-full'>
-                            <Button variant="outline" className="w-full border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-black">Dashboard</Button>
-                        </Link>
-                        <Button onClick={() => signOut()} variant="ghost" className='w-full'>Sign Out</Button>
-                    </div>
-                ) : (
-                    <Link href="/api/auth/signin" className='w-full'>
-                        <Button className="w-full bg-orange-500 text-black hover:bg-orange-600">Sign In</Button>
-                    </Link>
-                )}
+                <UserAuth />
             </div>
           </div>
         </div>

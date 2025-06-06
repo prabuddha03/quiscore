@@ -38,10 +38,10 @@ export function Hero() {
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight">
             <span className="block">The Ultimate Platform for</span>
-            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-500">Live Scoring</span>
+            <span className="block text-transparent pb-4 bg-clip-text bg-gradient-to-r from-orange-500 to-red-500">Live Scoring</span>
           </h1>
           <p className="mt-6 max-w-md mx-auto text-lg text-gray-400 sm:max-w-xl">
-            QuiScore provides a seamless, real-time scoring solution for any event. From quizzes and corporate challenges to chess and badminton tournaments, focus on the competition—we'll handle the scores.
+            QuiScore provides a seamless, real-time scoring solution for any event. From quizzes and corporate challenges to chess and badminton tournaments, focus on the competition—we&apos;ll handle the scores.
           </p>
           <div className="mt-10 flex flex-wrap justify-center gap-4">
             <motion.div

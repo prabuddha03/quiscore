@@ -5,6 +5,8 @@ import { Providers } from "./providers";
 import { Navbar } from "@/components/landing/Navbar";
 import { Footer } from "@/components/landing/Footer";
 import { Toaster } from 'sonner';
+import { SignInModal } from "@/components/auth/SignInModal";
+import { SignOutModal } from "@/components/auth/SignOutModal";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -29,6 +31,8 @@ export default function RootLayout({
       <body className={`${inter.className} bg-black`}>
         <Providers>
           <Toaster richColors theme="dark" />
+          <SignInModal />
+          <SignOutModal />
           <Navbar />
           <main className="min-h-screen pt-20">
             {children}

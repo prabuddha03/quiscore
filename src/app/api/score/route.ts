@@ -1,7 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
+import { Server as SocketIOServer } from "socket.io";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -26,8 +28,7 @@ export async function POST(req: Request) {
 
   // Emit Socket.IO event for real-time updates
   try {
-    const { Server } = await import("socket.io");
-    const io = global.io as any;
+    const io = (global as any).io as SocketIOServer;
     if (io) {
       io.to(`event_${eventId}`).emit("score-updated", {
         eventId,
@@ -77,8 +78,7 @@ export async function PUT(req: Request) {
 
   // Emit Socket.IO event for real-time updates
   try {
-    const { Server } = await import("socket.io");
-    const io = global.io as any;
+    const io = (global as any).io as SocketIOServer;
     if (io) {
       io.to(`event_${eventId}`).emit("score-updated", {
         eventId,
