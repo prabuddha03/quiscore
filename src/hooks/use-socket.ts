@@ -100,7 +100,8 @@ export const useSocket = (serverPath: string) => {
         socket.close();
       }
     };
-  }, [serverPath, socket]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverPath]);
 
   return { socket, isConnected };
 }; 

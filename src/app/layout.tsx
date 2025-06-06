@@ -7,6 +7,7 @@ import { Footer } from "@/components/landing/Footer";
 import { Toaster } from 'sonner';
 import { SignInModal } from "@/components/auth/SignInModal";
 import { SignOutModal } from "@/components/auth/SignOutModal";
+import { CreateEventModal } from "@/components/event/CreateEventModal";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -33,6 +34,7 @@ export default function RootLayout({
           <Toaster richColors theme="dark" />
           <SignInModal />
           <SignOutModal />
+          <CreateEventModal />
           <Navbar />
           <main className="min-h-screen pt-20">
             {children}

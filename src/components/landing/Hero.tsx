@@ -3,8 +3,23 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { Zap, ChevronRight } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { useAuthModal } from '@/context/AuthModalContext';
+import { useCreateEventModal } from '@/context/CreateEventModalContext';
 
 export function Hero() {
+  const { status } = useSession();
+  const { openSignInModal } = useAuthModal();
+  const { openCreateEventModal } = useCreateEventModal();
+
+  const handleCreateEventClick = () => {
+    if (status === 'authenticated') {
+      openCreateEventModal();
+    } else {
+      openSignInModal();
+    }
+  };
+
   return (
     <section className="relative bg-black text-white py-32 sm:py-40 lg:py-48" id="home">
       {/* Background Gradient */}
@@ -41,18 +56,16 @@ export function Hero() {
             <span className="block text-transparent pb-4 bg-clip-text bg-gradient-to-r from-orange-500 to-red-500">Live Scoring</span>
           </h1>
           <p className="mt-6 max-w-md mx-auto text-lg text-gray-400 sm:max-w-xl">
-            QuiScore provides a seamless, real-time scoring solution for any event. From quizzes and corporate challenges to chess and badminton tournaments, focus on the competition—we&apos;ll handle the scores.
+          QuiScore is a real-time scoring platform for quizzes, hackathons, debates, corporate events, and tournaments—so you can compete, while we handle the scores.
           </p>
           <div className="mt-10 flex flex-wrap justify-center gap-4">
             <motion.div
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              <Link href="/create">
-                <Button size="lg" className="bg-orange-500 text-black font-semibold hover:bg-orange-600 shadow-lg shadow-orange-500/20">
-                  Create an Event <Zap className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
+              <Button size="lg" onClick={handleCreateEventClick} className="bg-orange-500 text-black font-semibold hover:bg-orange-600 shadow-lg shadow-orange-500/20">
+                Create an Event <Zap className="ml-2 h-5 w-5" />
+              </Button>
             </motion.div>
             <motion.div
               whileHover={{ scale: 1.05 }}

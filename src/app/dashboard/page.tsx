@@ -17,13 +17,22 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ManageAccessModal } from "@/components/ManageAccessModal";
 import { Badge } from "@/components/ui/badge";
 import { useAuthModal } from "@/context/AuthModalContext";
+import { useCreateEventModal } from "@/context/CreateEventModalContext";
 
 export default function DashboardPage() {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const { openSignInModal } = useAuthModal();
+  const { openCreateEventModal } = useCreateEventModal();
+
+  const handleCreateEventClick = () => {
+    if (status === 'authenticated') {
+      openCreateEventModal();
+    } else {
+      openSignInModal();
+    }
+  };
 
   const fetchEvents = useCallback(async () => {
     if (status !== 'authenticated') {
@@ -81,12 +90,10 @@ export default function DashboardPage() {
       <div className="container mx-auto py-10 px-4">
         <div className="flex justify-between items-center mb-8">
             <h1 className="text-3xl font-bold">My Events</h1>
-            <Link href="/create">
-                <Button className="bg-orange-500 hover:bg-orange-600 text-white">
-                    <PlusCircle className="h-4 w-4 mr-2" />
-                    Create Event
-                </Button>
-            </Link>
+            <Button onClick={handleCreateEventClick} className="bg-orange-500 hover:bg-orange-600 text-white">
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Create Event
+            </Button>
         </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {events.map((event) => (
@@ -140,12 +147,10 @@ export default function DashboardPage() {
               <p className="text-gray-400 mt-2 mb-6">
                 You haven&apos;t created any events yet. Get started now!
               </p>
-              <Link href="/create">
-                <Button className="bg-orange-500 hover:bg-orange-600 text-white">
-                    <PlusCircle className="h-4 w-4 mr-2" />
-                    Create Your First Event
-                </Button>
-              </Link>
+              <Button onClick={handleCreateEventClick} className="bg-orange-500 hover:bg-orange-600 text-white">
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Create Your First Event
+              </Button>
             </div>
           )}
       </div>
