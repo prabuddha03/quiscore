@@ -72,6 +72,7 @@ model Event {
 model Team {
     id      String  @id @default(cuid())
     name    String
+    players Json?
     event   Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
     eventId String
     scores  Score[]

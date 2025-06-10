@@ -25,11 +25,18 @@ import {
 } from "@/components/ui/accordion";
 import { QRCodeModal } from "@/components/QRCodeModal";
 import { EditRoundModal } from "@/components/EditRoundModal";
+import { EditTeamModal } from "@/components/EditTeamModal";
 
 // Types
+type Player = {
+  id?: string;
+  name: string;
+  isLeader?: boolean;
+};
+
 type QuestionWithScores = Question & { scores: Score[] };
 type RoundWithQuestions = Round & { questions: QuestionWithScores[] };
-type TeamWithScores = Team & { scores: Score[] };
+type TeamWithScores = Omit<Team, 'players'> & { scores: Score[]; players: Player[] };
 type EventWithRelations = Event & {
   teams: TeamWithScores[];
   rounds: RoundWithQuestions[];
@@ -59,6 +66,11 @@ export default function EventAdminPage({
     const res = await fetch(`/api/event/${id}`);
     if (res.ok) {
       const data = await res.json();
+      // Manually cast players to the correct type.
+      data.teams = data.teams.map((team: Team) => ({
+        ...team,
+        players: team.players ? (team.players as Player[]) : [],
+      }));
       setEvent(data);
     }
   }, [id]);
@@ -180,7 +192,10 @@ export default function EventAdminPage({
                         <motion.div layout key={team.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
                           <Card className="bg-gray-800/60 border-white/10 text-white">
                             <CardHeader className="flex flex-row items-center justify-between pb-2">
-                              <CardTitle className="text-lg font-medium">{team.name}</CardTitle>
+                              <div className="flex items-center">
+                                <CardTitle className="text-lg font-medium">{team.name}</CardTitle>
+                                <EditTeamModal team={team} onTeamUpdated={fetchEvent} />
+                              </div>
                                <Badge className={`bg-gray-700 text-gray-300 border-0 ${index === 0 ? 'bg-orange-500 text-black' : ''}`}>#{index + 1}</Badge>
                             </CardHeader>
                             <CardContent>
