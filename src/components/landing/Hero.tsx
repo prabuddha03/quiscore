@@ -21,7 +21,7 @@ export function Hero() {
   };
 
   return (
-    <section className="relative bg-black text-white py-32 sm:py-40 lg:py-48" id="home">
+    <section className="relative bg-black text-white h-screen flex items-center justify-center" id="home">
       {/* Background Gradient */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-gray-900 via-black to-gray-900 opacity-80"></div>

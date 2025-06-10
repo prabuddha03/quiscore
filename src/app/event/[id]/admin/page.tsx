@@ -231,10 +231,11 @@ export default function EventAdminPage({
                   >
                     {event.rounds.map((round) => (
                       <AccordionItem key={round.id} value={round.id} className="bg-gray-800/50 rounded-lg border-none">
-                        <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                          <div className="flex items-center justify-between w-full">
-                            <h4 className="text-md font-semibold text-gray-200">{round.name}</h4>
-                            <div className="flex items-center gap-2">
+                        <div className="flex items-center justify-between w-full px-4 py-3">
+                            <AccordionTrigger className="hover:no-underline">
+                                <h4 className="text-md font-semibold text-gray-200">{round.name}</h4>
+                            </AccordionTrigger>
+                            <div className="flex items-center gap-2" onClick={(e) => { e.stopPropagation(); }}>
                                 <EditRoundModal round={round} onRoundUpdated={fetchEvent} />
                                 <RoundScoreModal 
                                     roundId={round.id}
@@ -242,8 +243,7 @@ export default function EventAdminPage({
                                     teams={event.teams}
                                 />
                             </div>
-                          </div>
-                        </AccordionTrigger>
+                        </div>
                         <AccordionContent className="p-4 pt-0">
                           {round.questions.length > 0 && (
                             <div className="mb-4">
