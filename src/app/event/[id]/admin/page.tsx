@@ -25,11 +25,18 @@ import {
 } from "@/components/ui/accordion";
 import { QRCodeModal } from "@/components/QRCodeModal";
 import { EditRoundModal } from "@/components/EditRoundModal";
+import { EditTeamModal } from "@/components/EditTeamModal";
 
 // Types
+type Player = {
+  id?: string;
+  name: string;
+  isLeader?: boolean;
+};
+
 type QuestionWithScores = Question & { scores: Score[] };
 type RoundWithQuestions = Round & { questions: QuestionWithScores[] };
-type TeamWithScores = Team & { scores: Score[] };
+type TeamWithScores = Omit<Team, 'players'> & { scores: Score[]; players: Player[] };
 type EventWithRelations = Event & {
   teams: TeamWithScores[];
   rounds: RoundWithQuestions[];
@@ -59,6 +66,11 @@ export default function EventAdminPage({
     const res = await fetch(`/api/event/${id}`);
     if (res.ok) {
       const data = await res.json();
+      // Manually cast players to the correct type.
+      data.teams = data.teams.map((team: Team) => ({
+        ...team,
+        players: team.players ? (team.players as Player[]) : [],
+      }));
       setEvent(data);
     }
   }, [id]);
@@ -180,7 +192,10 @@ export default function EventAdminPage({
                         <motion.div layout key={team.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
                           <Card className="bg-gray-800/60 border-white/10 text-white">
                             <CardHeader className="flex flex-row items-center justify-between pb-2">
-                              <CardTitle className="text-lg font-medium">{team.name}</CardTitle>
+                              <div className="flex items-center">
+                                <CardTitle className="text-lg font-medium">{team.name}</CardTitle>
+                                <EditTeamModal team={team} onTeamUpdated={fetchEvent} />
+                              </div>
                                <Badge className={`bg-gray-700 text-gray-300 border-0 ${index === 0 ? 'bg-orange-500 text-black' : ''}`}>#{index + 1}</Badge>
                             </CardHeader>
                             <CardContent>
@@ -216,10 +231,11 @@ export default function EventAdminPage({
                   >
                     {event.rounds.map((round) => (
                       <AccordionItem key={round.id} value={round.id} className="bg-gray-800/50 rounded-lg border-none">
-                        <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                          <div className="flex items-center justify-between w-full">
-                            <h4 className="text-md font-semibold text-gray-200">{round.name}</h4>
-                            <div className="flex items-center gap-2">
+                        <div className="flex items-center justify-between w-full px-4 py-3">
+                            <AccordionTrigger className="hover:no-underline">
+                                <h4 className="text-md font-semibold text-gray-200">{round.name}</h4>
+                            </AccordionTrigger>
+                            <div className="flex items-center gap-2" onClick={(e) => { e.stopPropagation(); }}>
                                 <EditRoundModal round={round} onRoundUpdated={fetchEvent} />
                                 <RoundScoreModal 
                                     roundId={round.id}
@@ -227,8 +243,7 @@ export default function EventAdminPage({
                                     teams={event.teams}
                                 />
                             </div>
-                          </div>
-                        </AccordionTrigger>
+                        </div>
                         <AccordionContent className="p-4 pt-0">
                           {round.questions.length > 0 && (
                             <div className="mb-4">

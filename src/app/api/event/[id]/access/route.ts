@@ -1,17 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-// Assuming you have authOptions defined somewhere, e.g., in /lib/auth
-// import { authOptions } from "@/lib/auth"; 
+import { authOptions } from "@/lib/auth";
+import { getServerSession } from "next-auth";
 
 export async function POST(
   request: Request,
   context: { params: any }
 ) {
-  // const session = await getServerSession(authOptions);
-  // if (!session?.user?.email) {
-  //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  // }
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   try {
     const { id } = context.params;
@@ -23,16 +23,16 @@ export async function POST(
     }
 
     // First, verify the user is the owner of the event
-    // const event = await prisma.event.findFirst({
-    //   where: {
-    //     id: id,
-    //     createdBy: session.user.email,
-    //   },
-    // });
+    const event = await prisma.event.findFirst({
+      where: {
+        id: id,
+        createdBy: session.user.id,
+      },
+    });
 
-    // if (!event) {
-    //     return NextResponse.json({ error: "Event not found or you don't have permission" }, { status: 404 });
-    // }
+    if (!event) {
+        return NextResponse.json({ error: "Event not found or you don't have permission" }, { status: 404 });
+    }
 
     const updatedEvent = await prisma.event.update({
       where: { id },

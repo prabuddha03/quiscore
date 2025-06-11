@@ -27,9 +27,10 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { ArrowLeft, AlertTriangle, TrendingUp } from "lucide-react";
+import { ArrowLeft, AlertTriangle, TrendingUp, Users } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { ComparisonModal } from "@/components/ComparisonModal";
 
 // Type definitions from scoreboard page
 type QuestionWithScores = Question & { scores: Score[] };
@@ -55,6 +56,7 @@ export default function TeamAnalysisPage({
 }) {
   const { id: eventId, teamId } = use(params);
   const [event, setEvent] = useState<EventWithRelations | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const fetchEvent = useCallback(async () => {
     const res = await fetch(`/api/event/${eventId}`);
@@ -79,6 +81,8 @@ export default function TeamAnalysisPage({
   }
 
   const targetTeam = event.teams.find((t) => t.id === teamId);
+ //const otherTeams = event.teams.filter((t) => t.id !== teamId);
+
   if (!targetTeam) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-black text-white">
@@ -239,6 +243,12 @@ export default function TeamAnalysisPage({
             Performance Analysis
           </h1>
           <p className="text-2xl text-orange-400">{targetTeam.name}</p>
+          <div className="mt-4">
+            <Button onClick={() => setIsModalOpen(true)}>
+              <Users className="h-4 w-4 mr-2" />
+              Compare with others
+            </Button>
+          </div>
         </div>
 
         {/* --- Analysis UI --- */}
@@ -319,20 +329,33 @@ export default function TeamAnalysisPage({
                 </CardHeader>
                 <CardContent>
                     <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={chartData}>
+                        <BarChart 
+                            data={chartData}
+                            margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                        >
+                            <defs>
+                                <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.9}/>
+                                    <stop offset="95%" stopColor="#ea580c" stopOpacity={0.5}/>
+                                </linearGradient>
+                                <linearGradient id="colorHypothetical" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.9}/>
+                                    <stop offset="95%" stopColor="#16a34a" stopOpacity={0.5}/>
+                                </linearGradient>
+                            </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
                             <XAxis dataKey="name" stroke="#888888" />
                             <YAxis stroke="#888888" />
                             <Tooltip
                                 contentStyle={{
-                                    backgroundColor: 'rgba(20, 20, 20, 0.8)',
-                                    borderColor: 'rgba(255, 255, 255, 0.2)',
-                                    color: '#ffffff'
+                                    backgroundColor: "rgba(30, 41, 59, 0.9)",
+                                    borderColor: "rgba(255, 255, 255, 0.2)",
                                 }}
+                                cursor={{fill: 'rgba(100, 116, 139, 0.1)'}}
                             />
-                            <Legend wrapperStyle={{ color: '#ffffff' }} />
-                            <Bar dataKey="Actual Score" fill="#8884d8" />
-                            <Bar dataKey="Hypothetical Score" fill="#82ca9d" />
+                            <Legend />
+                            <Bar dataKey="Actual Score" fill="url(#colorActual)" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="Hypothetical Score" fill="url(#colorHypothetical)" radius={[4, 4, 0, 0]} />
                         </BarChart>
                     </ResponsiveContainer>
                 </CardContent>
@@ -370,6 +393,12 @@ export default function TeamAnalysisPage({
             )}
         </div>
       </div>
+      <ComparisonModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        targetTeam={targetTeam}
+        event={event}
+      />
     </div>
   );
 } 
