@@ -71,7 +71,7 @@ export function RoundScoreModal({ roundId, roundName, teams }: RoundScoreModalPr
     return <Badge variant="outline" className={`font-bold ${className}`}>{score.points > 0 ? '+' : ''}{score.points}</Badge>;
   };
   
-  const getMethodDisplay = (method: string | undefined) => {
+  const getMethodDisplay = (method: string | null | undefined) => {
     if (!method) return null;
     const color = method.toLowerCase().includes('pounce') ? "text-blue-400" 
                  : method.toLowerCase().includes('bounce') ? "text-purple-400"

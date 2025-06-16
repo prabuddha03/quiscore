@@ -104,7 +104,7 @@ export default function TeamAnalysisPage({
         return { round, question, score };
       })
     )
-    .filter(({ score }) => score && score.points < 0 && score.method.toLowerCase().includes('pounce'))
+    .filter(({ score }) => score && score.points < 0 && score.method && score.method.toLowerCase().includes('pounce'))
     .map(({ round, question, score }) => ({
         roundName: round.name,
         questionNumber: question.number,

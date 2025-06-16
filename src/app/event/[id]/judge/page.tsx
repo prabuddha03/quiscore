@@ -35,14 +35,15 @@ async function getEventForJudging(eventId: string): Promise<EventForJudging | nu
   return event as EventForJudging | null;
 }
 
-export default async function JudgePage({ params }: { params: { id: string } }) {
+export default async function JudgePage({ params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user?.email) {
     redirect("/api/auth/signin");
   }
 
-  const event = await getEventForJudging(params.id);
+  const { id } = await params;
+  const event = await getEventForJudging(id);
 
   if (!event) {
     return (
