@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
@@ -53,7 +54,7 @@ export function CreateEventModal() {
   };
   
   const generateSampleCsv = () => {
-    let headers = ["team_name"];
+    const headers = ["team_name"];
     for (let i = 1; i <= membersPerTeam; i++) {
       headers.push(`member_${i}_name`);
     }

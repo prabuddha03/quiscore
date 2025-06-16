@@ -10,13 +10,13 @@ async function checkEventOwner(eventId: string, userId: string) {
     return !!event;
 }
 
-export async function PUT(req: Request, { params }: { params: { id: string, criteriaId: string } }) {
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string, criteriaId: string }> }) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id: eventId, criteriaId } = params;
+    const { id: eventId, criteriaId } = await params;
     const isOwner = await checkEventOwner(eventId, session.user.id);
     if (!isOwner) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -36,13 +36,13 @@ export async function PUT(req: Request, { params }: { params: { id: string, crit
     }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string, criteriaId: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string, criteriaId: string }> }) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id: eventId, criteriaId } = params;
+    const { id: eventId, criteriaId } = await params;
     const isOwner = await checkEventOwner(eventId, session.user.id);
     if (!isOwner) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });

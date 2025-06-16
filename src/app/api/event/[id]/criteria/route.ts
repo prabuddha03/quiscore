@@ -13,13 +13,13 @@ async function checkEventOwner(eventId: string, userId: string) {
     return !!event;
 }
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const eventId = params.id;
+    const { id: eventId } = await params;
     const isOwner = await checkEventOwner(eventId, session.user.id);
     if (!isOwner) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });

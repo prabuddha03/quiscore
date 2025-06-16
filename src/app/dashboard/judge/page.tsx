@@ -15,7 +15,7 @@ type EventWithDetails = Event & {
 };
 
 export default function JudgeDashboardPage() {
-    const { data: session, status } = useSession();
+    const { status } = useSession();
     const [events, setEvents] = useState<EventWithDetails[]>([]);
     const [loading, setLoading] = useState(true);
 

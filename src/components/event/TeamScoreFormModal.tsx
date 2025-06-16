@@ -29,7 +29,7 @@ type ScoreInput = {
     pointers: string;
 };
 
-export function TeamScoreFormModal({ isOpen, onClose, team, round, judgeId, eventId }: TeamScoreFormModalProps) {
+export function TeamScoreFormModal({ isOpen, onClose, team, round, judgeId }: TeamScoreFormModalProps) {
   const [scores, setScores] = useState<{ [criteriaId: string]: ScoreInput }>({});
   const [loading, setLoading] = useState(false);
 

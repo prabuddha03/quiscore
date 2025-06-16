@@ -15,6 +15,7 @@ export const getIo = (): ServerIO | undefined => {
     // This is a placeholder function to be used by server-side components 
     // to get the io instance. The actual instance is attached in pages/api/socket/io.ts
     // In a real app, you'd use a more robust state management or service locator pattern.
-    // @ts-ignore
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error
     return global.io;
 } 
