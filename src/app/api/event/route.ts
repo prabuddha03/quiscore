@@ -1,7 +1,16 @@
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
+
+interface TeamData {
+    team_name: string;
+    document_link?: string;
+    leader_name?: string;
+    leader_contact?: string;
+    [key: string]: string | undefined;
+}
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -9,18 +18,22 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { name, type, teams } = await req.json();
+  const { name, type, teams, subType, teamsData } = await req.json();
 
-  if (!name || !type || !teams) {
-    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+  if (!name || !type) {
+    return NextResponse.json({ error: "Missing required fields: name and type" }, { status: 400 });
+  }
+  
+  if (type === 'QUIZ' && (teams === undefined || teams < 0)) {
+    return NextResponse.json({ error: "Missing or invalid number of teams for quiz" }, { status: 400 });
+  }
+  
+  if (type === 'GENERAL' && !subType) {
+    return NextResponse.json({ error: "Missing scoring sub-type for general event" }, { status: 400 });
   }
 
   try {
-    // Find or create the user first
-    let user = await prisma.user.findUnique({
-      where: { email: session.user.email }
-    });
-
+    let user = await prisma.user.findUnique({ where: { email: session.user.email } });
     if (!user) {
       user = await prisma.user.create({
         data: {
@@ -31,18 +44,54 @@ export async function POST(req: Request) {
       });
     }
 
-    const event = await prisma.event.create({
-      data: {
-        name,
-        type,
-        createdBy: user.id, // Use the user ID instead of email
-        allowedEditors: [session.user.email],
-        teams: {
+    const eventData: Prisma.EventCreateInput = {
+      name,
+      type,
+      createdByUser: { connect: { id: user.id } },
+      allowedEditors: [session.user.email],
+    };
+
+    if (type === 'QUIZ') {
+      eventData.teams = {
+        create: Array.from({ length: teams }, (_, i) => ({
+          name: `Team ${i + 1}`,
+        })),
+      };
+    } else if (type === 'GENERAL') {
+      eventData.subType = subType;
+
+      if (teamsData && teamsData.length > 0) {
+        eventData.teams = {
+          create: teamsData.map((team: TeamData) => {
+            const players: { name: string }[] = [];
+            // Aggregate all member columns into a players array
+            Object.keys(team).forEach(key => {
+              if (key.startsWith('member_') && team[key]) {
+                players.push({ name: team[key]! });
+              }
+            });
+
+            return {
+              name: team.team_name,
+              documentLink: team.document_link || null,
+              players: {
+                members: players,
+                leader: (team.leader_name || team.leader_contact) ? { name: team.leader_name, contact: team.leader_contact } : undefined
+              },
+            };
+          })
+        };
+      } else if (teams > 0) {
+        eventData.teams = {
           create: Array.from({ length: teams }, (_, i) => ({
-            name: `Team ${i + 1}`,
+            name: `Participant ${i + 1}`,
           })),
-        },
-      },
+        };
+      }
+    }
+
+    const event = await prisma.event.create({
+      data: eventData,
       include: {
         teams: true,
       }

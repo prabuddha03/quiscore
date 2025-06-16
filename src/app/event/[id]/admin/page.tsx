@@ -9,12 +9,12 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Event, Round, Question, Team, Score } from "@prisma/client";
+import { Event, Round, Question, Team, Score, Judge, Criteria, Prisma } from "@prisma/client";
 import { RoundForm } from "@/components/RoundForm";
 import { QuestionInput } from "@/components/QuestionInput";
 import { RoundScoreModal } from "@/components/RoundScoreModal";
 import { motion } from 'framer-motion';
-import { ArrowUpDown, Share2, QrCode } from "lucide-react";
+import { ArrowUpDown, Share2, QrCode, PlusCircle, Trash2 } from "lucide-react";
 import { useSocket } from "@/hooks/use-socket";
 import { toast } from 'sonner';
 import {
@@ -26,21 +26,89 @@ import {
 import { QRCodeModal } from "@/components/QRCodeModal";
 import { EditRoundModal } from "@/components/EditRoundModal";
 import { EditTeamModal } from "@/components/EditTeamModal";
+import { JudgeManagement } from "@/components/event/JudgeManagement";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { EditCriteriaModal } from "@/components/EditCriteriaModal";
+import { useSession } from "next-auth/react";
+import { GeneralScoreMatrix } from "@/components/event/GeneralScoreMatrix";
 
 // Types
-type Player = {
-  id?: string;
-  name: string;
-  isLeader?: boolean;
-};
-
 type QuestionWithScores = Question & { scores: Score[] };
-type RoundWithQuestions = Round & { questions: QuestionWithScores[] };
-type TeamWithScores = Omit<Team, 'players'> & { scores: Score[]; players: Player[] };
+type CriteriaWithScores = Criteria & { scores: Score[] };
+type RoundWithDetails = Round & { questions: QuestionWithScores[]; criteria: CriteriaWithScores[] };
+type TeamWithScores = Omit<Team, 'players'> & { scores: Score[]; players: Prisma.JsonValue };
 type EventWithRelations = Event & {
   teams: TeamWithScores[];
-  rounds: RoundWithQuestions[];
+  rounds: RoundWithDetails[];
+  judges: Judge[];
 };
+
+// Local CriteriaForm Component
+function CriteriaForm({ roundId, eventId, onCriteriaAdded }: { roundId: string; eventId: string; onCriteriaAdded: () => void; }) {
+  const [name, setName] = useState("");
+  const [maxPoints, setMaxPoints] = useState<number | ''>('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name) {
+      toast.error("Criteria name cannot be empty.");
+      return;
+    }
+    setLoading(true);
+
+    const res = await fetch(`/api/event/${eventId}/criteria`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, roundId, maxPoints: Number(maxPoints) || null }),
+    });
+
+    if (res.ok) {
+      toast.success("Criteria added successfully!");
+      setName("");
+      setMaxPoints('');
+      onCriteriaAdded();
+    } else {
+      const { error } = await res.json();
+      toast.error(`Failed to add criteria: ${error}`);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-4 p-4 border-t border-white/10 space-y-4">
+        <h4 className="text-md font-semibold text-gray-300">Add New Criterion</h4>
+        <div className="flex items-end gap-4">
+            <div className="flex-grow space-y-1.5">
+                <Label htmlFor="criteria-name">Criterion Name</Label>
+                <Input
+                    id="criteria-name"
+                    placeholder="e.g., Presentation Skills"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="bg-gray-800 border-gray-600"
+                />
+            </div>
+            <div className="space-y-1.5">
+                <Label htmlFor="max-points">Max Points</Label>
+                <Input
+                    id="max-points"
+                    type="number"
+                    placeholder="e.g., 10"
+                    value={maxPoints}
+                    onChange={(e) => setMaxPoints(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+                    className="bg-gray-800 border-gray-600 w-24"
+                />
+            </div>
+            <Button type="submit" disabled={loading} size="sm">
+                <PlusCircle className="h-4 w-4 mr-2" />
+                {loading ? "Adding..." : "Add"}
+            </Button>
+        </div>
+    </form>
+  );
+}
 
 // Main Component
 export default function EventAdminPage({
@@ -54,7 +122,10 @@ export default function EventAdminPage({
   const [openAccordionId, setOpenAccordionId] = useState<string>();
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [scoreboardUrl, setScoreboardUrl] = useState('');
-  const { socket, isConnected } = useSocket(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000');
+  const { socket, isConnected } = useSocket(
+    (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000') + "?path=/api/socket/io"
+  );
+  const { data: session } = useSession();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -66,11 +137,8 @@ export default function EventAdminPage({
     const res = await fetch(`/api/event/${id}`);
     if (res.ok) {
       const data = await res.json();
-      // Manually cast players to the correct type.
-      data.teams = data.teams.map((team: Team) => ({
-        ...team,
-        players: team.players ? (team.players as Player[]) : [],
-      }));
+      // The players object is now passed directly.
+      // The EditTeamModal will handle parsing.
       setEvent(data);
     }
   }, [id]);
@@ -80,29 +148,48 @@ export default function EventAdminPage({
   }, [fetchEvent]);
 
   useEffect(() => {
-    if (event?.rounds && event.rounds.length > 0) {
-      // When a new round is added, its length will change, triggering this effect.
-      // We assume the last round in the array is the newest one.
-      const lastRoundId = event.rounds[event.rounds.length - 1]?.id;
-      setOpenAccordionId(lastRoundId);
+    if (event?.rounds && event.rounds.length > 0 && !openAccordionId) {
+        const lastRoundId = event.rounds[event.rounds.length - 1]?.id;
+        setOpenAccordionId(lastRoundId);
     }
-  }, [event?.rounds]); // Only re-run when the number of rounds changes
+  }, [event?.rounds, openAccordionId]);
 
   useEffect(() => {
     if (socket && isConnected) {
       socket.emit("join-room", `event_${id}`);
       
-      socket.on("score-updated", () => {
-        console.log("Score updated via socket");
+      const handleScoreUpdate = () => {
+        console.log("Score updated via socket, refreshing admin page...");
         fetchEvent();
-      });
+      };
+      
+      socket.on("score-updated", handleScoreUpdate);
 
       return () => {
-        socket.off("score-updated");
+        socket.off("score-updated", handleScoreUpdate);
         socket.emit("leave-room", `event_${id}`);
       };
     }
   }, [socket, isConnected, id, fetchEvent]);
+
+  const handleDeleteCriteria = async (criteriaId: string) => {
+    if (!window.confirm("Are you sure you want to delete this criterion? This action cannot be undone.")) {
+      return;
+    }
+    try {
+        const response = await fetch(`/api/event/${event?.id}/criteria/${criteriaId}`, {
+            method: 'DELETE',
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to delete criterion');
+        }
+        toast.success("Criterion deleted successfully.");
+        fetchEvent(); // Re-fetch event data to update the UI
+    } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'An unknown error occurred.');
+    }
+  };
 
   const calculateTotalScore = (scores: Score[] | undefined) => {
     if (!scores || scores.length === 0) return 0;
@@ -137,6 +224,21 @@ export default function EventAdminPage({
 
   if (!event) {
     return <div className="flex items-center justify-center min-h-screen bg-black text-white">Loading...</div>;
+  }
+  
+  const isCreator = event.createdBy === session?.user?.id;
+  const isEditor = event.allowedEditors.includes(session?.user?.email || '');
+  const isAuthorized = isCreator || isEditor;
+
+  if (!isAuthorized) {
+    return (
+        <div className="flex items-center justify-center min-h-screen bg-black text-white">
+            <div className="text-center">
+                <h1 className="text-4xl font-bold text-red-500">Access Denied</h1>
+                <p className="mt-4 text-lg text-gray-400">You do not have permission to view this page.</p>
+            </div>
+        </div>
+    );
   }
 
   return (
@@ -220,7 +322,7 @@ export default function EventAdminPage({
                 <CardContent className="space-y-6">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-200 mb-4">Rounds</h3>
-                    <RoundForm eventId={event.id} onRoundCreated={fetchEvent} />
+                    <RoundForm eventId={event.id} eventType={event.type} onRoundCreated={fetchEvent} />
                   </div>
                   <Accordion 
                     type="single" 
@@ -236,35 +338,65 @@ export default function EventAdminPage({
                                 <h4 className="text-md font-semibold text-gray-200">{round.name}</h4>
                             </AccordionTrigger>
                             <div className="flex items-center gap-2" onClick={(e) => { e.stopPropagation(); }}>
-                                <EditRoundModal round={round} onRoundUpdated={fetchEvent} />
-                                <RoundScoreModal 
-                                    roundId={round.id}
-                                    roundName={round.name}
-                                    teams={event.teams}
-                                />
+                                <EditRoundModal round={round} eventType={event.type} onRoundUpdated={fetchEvent} />
+                                {event.type === 'QUIZ' && 
+                                  <RoundScoreModal 
+                                      roundId={round.id}
+                                      roundName={round.name}
+                                      teams={event.teams}
+                                  />
+                                }
                             </div>
                         </div>
                         <AccordionContent className="p-4 pt-0">
-                          {round.questions.length > 0 && (
-                            <div className="mb-4">
-                              <p className="text-sm text-gray-400">
-                                Questions: {round.questions.map(q => q.number).join(", ")}
-                              </p>
+                          {event.type === 'QUIZ' && (
+                            <>
+                              {round.questions.length > 0 && (
+                                <div className="mb-4">
+                                  <p className="text-sm text-gray-400">
+                                    Questions: {round.questions.map(q => q.number).join(", ")}
+                                  </p>
+                                </div>
+                              )}
+                              <QuestionInput
+                                roundId={round.id}
+                                teams={event.teams}
+                                eventId={event.id}
+                                onQuestionAdded={fetchEvent}
+                                existingQuestions={round.questions}
+                              />
+                            </>
+                          )}
+                          {event.type === 'GENERAL' && (
+                            <div>
+                             <h4 className="text-md font-semibold text-gray-300 mt-4 mb-2">Scoring Criteria</h4>
+                             <div className="space-y-2">
+                                {round.criteria.map(c => (
+                                 <div key={c.id} className="flex items-center justify-between p-2 bg-gray-800/50 rounded">
+                                   <span className="text-gray-300">{c.name} {c.maxPoints && `(out of ${c.maxPoints})`}</span>
+                                   <div className="flex items-center gap-2">
+                                       <EditCriteriaModal criterion={c} onCriteriaUpdated={fetchEvent} eventId={event.id} />
+                                       <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-400" onClick={() => handleDeleteCriteria(c.id)}>
+                                           <Trash2 className="h-4 w-4" />
+                                       </Button>
+                                   </div>
+                                 </div>
+                                ))}
+                             </div>
+                             <CriteriaForm roundId={round.id} eventId={id} onCriteriaAdded={fetchEvent} />
+                             <GeneralScoreMatrix teams={event.teams} criteria={round.criteria} />
                             </div>
                           )}
-                          <QuestionInput
-                            roundId={round.id}
-                            teams={event.teams}
-                            eventId={event.id}
-                            onQuestionAdded={fetchEvent}
-                            existingQuestions={round.questions}
-                          />
                         </AccordionContent>
                       </AccordionItem>
                     ))}
                   </Accordion>
                 </CardContent>
               </Card>
+
+              {(event.type === 'GENERAL' || event.subType === 'judge_based_individual') && (
+                 <JudgeManagement eventId={id} judges={event.judges} onUpdate={fetchEvent} />
+              )}
 
               <Card className="bg-gray-900/50 border-white/10">
                 <CardHeader>
