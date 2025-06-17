@@ -1,7 +1,7 @@
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import { redis } from "@/lib/redis";
-import { Adapter } from "next-auth/adapters";
+import { Adapter, AdapterSession, AdapterUser } from "next-auth/adapters";
 import type { Session, User } from "@prisma/client";
 
 const TOKEN_EXPIRATION = 2 * 60 * 60; // 2 hours
@@ -20,7 +20,9 @@ export function RedisAdapter(p: typeof prisma): Adapter {
     createSession: async (session) => {
       const createdSession = await prismaAdapter.createSession!(session);
       try {
-        await redis.setex(`session:${createdSession.sessionToken}`, TOKEN_EXPIRATION, JSON.stringify(createdSession));
+        if (redis) {
+          await redis.setex(`session:${createdSession.sessionToken}`, TOKEN_EXPIRATION, JSON.stringify(createdSession));
+        }
       } catch (e) {
         console.error("Redis [createSession]:", e);
       }
@@ -37,8 +39,15 @@ export function RedisAdapter(p: typeof prisma): Adapter {
               
               if (userData) {
                   console.log("✅ [Cache Hit] Session and user retrieved from Redis.");
-                  const session = { ...cachedSessionData, expires: new Date(cachedSessionData.expires) };
-                  const user = { ...userData, emailVerified: userData.emailVerified ? new Date(userData.emailVerified) : null };
+                  const session: AdapterSession = { 
+                    ...cachedSessionData, 
+                    expires: new Date(cachedSessionData.expires) 
+                  };
+                  const user: AdapterUser = { 
+                    ...userData, 
+                    emailVerified: userData.emailVerified ? new Date(userData.emailVerified) : null,
+                    email: userData.email || "" // Ensure email is never null for AdapterUser
+                  };
 
                   await redis.expire(`user:${user.id}`, TOKEN_EXPIRATION);
                   return { session, user };
@@ -64,7 +73,7 @@ export function RedisAdapter(p: typeof prisma): Adapter {
     },
     updateSession: async (session) => {
         const updatedSession = await prismaAdapter.updateSession!(session);
-        if (updatedSession) {
+        if (updatedSession && redis) {
             try {
               await redis.setex(`session:${updatedSession.sessionToken}`, TOKEN_EXPIRATION, JSON.stringify(updatedSession));
             } catch(e) {
@@ -75,16 +84,20 @@ export function RedisAdapter(p: typeof prisma): Adapter {
     },
     deleteSession: async (sessionToken) => {
       try {
-        await redis.del(`session:${sessionToken}`);
+        if (redis) {
+          await redis.del(`session:${sessionToken}`);
+        }
       } catch(e) {
         console.error("Redis [deleteSession]:", e);
       }
-      return await prismaAdapter.deleteSession!(sessionToken);
+      await prismaAdapter.deleteSession!(sessionToken);
     },
-    createUser: async (user) => {
+    createUser: async (user: User) => {
         const createdUser = await prismaAdapter.createUser!(user);
         try {
-          await redis.setex(`user:${createdUser.id}`, TOKEN_EXPIRATION, JSON.stringify(createdUser));
+          if (redis) {
+            await redis.setex(`user:${createdUser.id}`, TOKEN_EXPIRATION, JSON.stringify(createdUser));
+          }
         } catch(e) {
           console.error("Redis [createUser]:", e);
         }
