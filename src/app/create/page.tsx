@@ -19,7 +19,7 @@ export default function CreatePage() {
         </CardHeader>
         <CardContent>
           <p className="mt-2 text-lg text-muted-foreground">
-            We're putting the final touches on our new premium features.
+            We&apos;re putting the final touches on our new premium features.
           </p>
           <p className="mt-4 text-md">
             For now, service is restricted to <strong>2 events</strong> per account. Stay tuned for the upgrade!
