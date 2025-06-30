@@ -6,8 +6,8 @@ import { ChevronDown } from 'lucide-react';
 
 const faqs = [
   {
-    question: 'What is QuiScore?',
-    answer: 'QuiScore is a real-time scoring platform designed for any live event. It allows organizers to manage participants or teams, track scores, and display a live scoreboard to the audience.',
+    question: 'What is scorOps?',
+    answer: 'scorOps is a real-time scoring platform designed for any live event. It allows organizers to manage participants or teams, track scores, and display a live scoreboard to the audience.',
   },
   {
     question: 'Can I customize the scoring rules?',
@@ -26,8 +26,8 @@ const faqs = [
     answer: 'We offer community support for our Hobby plan users. Pro plan users get priority email support, and Enterprise customers receive a dedicated account manager and personalized training.',
   },
   {
-    question: 'Can I try QuiScore before committing to a plan?',
-    answer: 'Yes, our Hobby plan is the perfect way to try out QuiScore. You can create an event, add participants, and test the real-time scoring features for any type of event to see if it is the right fit for you.',
+    question: 'Can I try scorOps before committing to a plan?',
+    answer: 'Yes, our Hobby plan is the perfect way to try out scorOps. You can create an event, add participants, and test the real-time scoring features for any type of event to see if it is the right fit for you.',
   },
 ];
 

@@ -62,7 +62,7 @@ You can use libraries like `BullMQ` or `Celery` (with a Python worker) to implem
 
 ### 5. Leaderboards
 
-Redis's Sorted Sets are a perfect data structure for implementing leaderboards. You can store user scores in a sorted set, and Redis will automatically keep them ordered by score. This makes it very fast to retrieve the top N users for a leaderboard. For your `quiscore` app, this is an excellent fit for displaying real-time rankings in a competition.
+Redis's Sorted Sets are a perfect data structure for implementing leaderboards. You can store user scores in a sorted set, and Redis will automatically keep them ordered by score. This makes it very fast to retrieve the top N users for a leaderboard. For your `scorOps` app, this is an excellent fit for displaying real-time rankings in a competition.
 
 **Example with ioredis:**
 

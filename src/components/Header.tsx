@@ -18,7 +18,7 @@ export function Header() {
     <header className="py-4">
       <div className="container mx-auto flex justify-between items-center">
         <Link href="/">
-          <h1 className="text-2xl font-bold">Quiscore</h1>
+          <h1 className="text-2xl font-bold">scorOps</h1>
         </Link>
         {session ? (
           <DropdownMenu>

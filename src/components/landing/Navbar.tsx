@@ -23,7 +23,7 @@ export function Navbar() {
             <Link href="/" className="flex-shrink-0">
                 <div className="flex items-center gap-2">
                     <Zap className="h-8 w-8 text-orange-500" />
-                    <span className="text-2xl font-bold text-white">QuiScore</span>
+                    <span className="text-2xl font-bold text-white">scorOps</span>
                 </div>
             </Link>
           </div>

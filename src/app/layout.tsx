@@ -12,7 +12,7 @@ import { CreateEventModal } from "@/components/event/CreateEventModal";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "QuiScore - Live Scoring for Events & Competitions",
+  title: "scorOps - Live Scoring for Events & Competitions",
   description: "The ultimate platform for live scoring your events and competitions. From quizzes to sports tournaments, get real-time results, customizable rules, and a seamless experience.",
 };
 
