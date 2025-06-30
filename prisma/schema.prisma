@@ -38,11 +38,12 @@ model Session {
 }
 
 model User {
-    id            String    @id @default(cuid())
+    id            String       @id @default(cuid())
     name          String?
-    email         String?   @unique
+    email         String?      @unique
     emailVerified DateTime?
     image         String?
+    category      UserCategory @default(FREE)
     accounts      Account[]
     sessions      Session[]
     events        Event[]
@@ -54,6 +55,13 @@ model VerificationToken {
     expires    DateTime
 
     @@unique([identifier, token])
+}
+
+enum UserCategory {
+    FREE
+    PREMIUM
+    ADMIN
+    ENTERPRISE
 }
 
 enum EventType {

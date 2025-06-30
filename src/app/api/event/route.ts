@@ -40,8 +40,24 @@ export async function POST(req: Request) {
           email: session.user.email,
           name: session.user.name,
           image: session.user.image,
-        }
+        },
       });
+    }
+
+    if (user.category === "FREE") {
+      const eventCount = await prisma.event.count({
+        where: { createdBy: user.id },
+      });
+
+      if (eventCount >= 2) {
+        return NextResponse.json(
+          {
+            error:
+              "Free users can create a maximum of 2 events. Please upgrade to premium for unlimited events.",
+          },
+          { status: 403 },
+        );
+      }
     }
 
     const eventData: Prisma.EventCreateInput = {
