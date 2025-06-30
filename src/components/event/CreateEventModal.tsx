@@ -45,7 +45,12 @@ export function CreateEventModal() {
 
   const handleTeamCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const count = parseInt(e.target.value, 10);
-    setTeamCount(count >= 0 ? count : 0);
+    if (count > 100) {
+      toast.warning("You can only create up to 100 teams.");
+      setTeamCount(100);
+    } else {
+      setTeamCount(count >= 0 ? count : 0);
+    }
   };
 
   const handleMembersPerTeamChange = (e: React.ChangeEvent<HTMLInputElement>) => {
