@@ -32,6 +32,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing scoring sub-type for general event" }, { status: 400 });
   }
 
+  // Validate team count limits
+  const actualTeamCount = teamsData && teamsData.length > 0 ? teamsData.length : teams;
+  if (actualTeamCount < 2) {
+    return NextResponse.json({ error: "At least 2 teams are required to create an event." }, { status: 400 });
+  }
+  
   if ((type === 'QUIZ' && teams > 100) || (type === 'GENERAL' && ((teamsData && teamsData.length > 100) || (teams && teams > 100)))) {
     return NextResponse.json({ error: "Maximum of 100 teams is allowed." }, { status: 400 });
   }

@@ -36,7 +36,7 @@ export function CreateEventModal() {
   const [eventType, setEventType] = useState("QUIZ");
   const [loading, setLoading] = useState(false);
   const [eventSubType, setEventSubType] = useState("");
-  const [teamCount, setTeamCount] = useState(0);
+  const [teamCount, setTeamCount] = useState(2);
   const [membersPerTeam, setMembersPerTeam] = useState(1);
   const [hasLeader, setHasLeader] = useState(false);
   const [hasDocumentLink, setHasDocumentLink] = useState(false);
@@ -49,7 +49,7 @@ export function CreateEventModal() {
       toast.warning("You can only create up to 100 teams.");
       setTeamCount(100);
     } else {
-      setTeamCount(count >= 0 ? count : 0);
+      setTeamCount(count >= 2 ? count : 2);
     }
   };
 
@@ -101,6 +101,14 @@ export function CreateEventModal() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    // Validate minimum team count
+    const actualTeamCount = teamsData.length > 0 ? teamsData.length : teamCount;
+    if (actualTeamCount < 2) {
+      toast.error("At least 2 teams are required to create an event.");
+      setLoading(false);
+      return;
+    }
 
     const body: any = { name, type: eventType };
 
