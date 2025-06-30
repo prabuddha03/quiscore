@@ -32,6 +32,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing scoring sub-type for general event" }, { status: 400 });
   }
 
+  if ((type === 'QUIZ' && teams > 100) || (type === 'GENERAL' && ((teamsData && teamsData.length > 100) || (teams && teams > 100)))) {
+    return NextResponse.json({ error: "Maximum of 100 teams is allowed." }, { status: 400 });
+  }
+
   try {
     let user = await prisma.user.findUnique({ where: { email: session.user.email } });
     if (!user) {
