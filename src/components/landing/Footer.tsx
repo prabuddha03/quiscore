@@ -23,7 +23,7 @@ export function Footer() {
           <div className="md:col-span-1">
              <Link href="/" className="flex items-center gap-2">
                 <Zap className="h-8 w-8 text-orange-500" />
-                <span className="text-2xl font-bold text-white">QuiScore</span>
+                <span className="text-2xl font-bold text-white">scorOps</span>
             </Link>
             <p className="mt-4 text-sm">
                 The ultimate platform for live scoring events.

@@ -57,7 +57,7 @@ export function Features() {
     <section id="features" className="bg-black py-20 sm:py-32">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center">
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-white">Why QuiScore?</h2>
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-white">Why scorOps?</h2>
           <p className="mt-4 max-w-2xl mx-auto text-lg text-gray-400">
             Everything you need to run a successful event, all in one place.
           </p>

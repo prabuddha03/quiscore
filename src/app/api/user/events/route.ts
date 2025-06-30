@@ -20,10 +20,19 @@ export async function GET() {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Get all events created by this user
+    const userEmail = session.user.email;
+
+    // Get all events where the user is either the creator, an allowed editor, or a judge.
     const events = await prisma.event.findMany({
       where: {
-        createdBy: user.id,
+        OR: [
+          { createdBy: user.id },
+          { allowedEditors: { has: userEmail } },
+          { judges: { some: { email: userEmail } } },
+        ],
+      },
+      include: {
+        judges: true, // Include judge details for the frontend
       },
       orderBy: {
         createdAt: "desc",

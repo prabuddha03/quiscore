@@ -17,11 +17,12 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useState, useEffect } from "react";
 import { Settings } from "lucide-react";
 import { toast } from 'sonner';
-import { Round } from "@prisma/client";
+import { Round, EventType } from "@prisma/client";
 
 interface EditRoundModalProps {
   round: Round;
   onRoundUpdated: () => void;
+  eventType: EventType;
 }
 
 type RoundRules = {
@@ -36,7 +37,7 @@ type RoundRules = {
   };
 };
 
-export function EditRoundModal({ round, onRoundUpdated }: EditRoundModalProps) {
+export function EditRoundModal({ round, onRoundUpdated, eventType }: EditRoundModalProps) {
   const [name, setName] = useState(round.name);
   const [pounce, setPounce] = useState(false);
   const [bounce, setBounce] = useState(false);
@@ -71,12 +72,15 @@ export function EditRoundModal({ round, onRoundUpdated }: EditRoundModalProps) {
     }
 
     setLoading(true);
+
+    const isQuiz = eventType === 'QUIZ';
+
     const res = await fetch(`/api/round/${round.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name,
-        rules: { 
+        rules: isQuiz ? { 
           pounce, 
           bounce, 
           direction,
@@ -86,7 +90,7 @@ export function EditRoundModal({ round, onRoundUpdated }: EditRoundModalProps) {
             pounceWrong,
             bouncePoints
           }
-        },
+        } : null,
       }),
     });
 
@@ -129,73 +133,77 @@ export function EditRoundModal({ round, onRoundUpdated }: EditRoundModalProps) {
             />
           </div>
           
-          <div className="space-y-4">
-            <h4 className="font-medium text-gray-200 border-b border-gray-700 pb-2">Round Rules</h4>
-            <div className="flex items-center space-x-2">
-              <Checkbox id="pounce-edit" checked={pounce} onCheckedChange={(checked) => setPounce(Boolean(checked))} className="data-[state=checked]:bg-orange-500 border-gray-600"/>
-              <Label htmlFor="pounce-edit" className="text-gray-300">Enable Pounce</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox id="bounce-edit" checked={bounce} onCheckedChange={(checked) => setBounce(Boolean(checked))} className="data-[state=checked]:bg-orange-500 border-gray-600"/>
-              <Label htmlFor="bounce-edit" className="text-gray-300">Enable Bounce</Label>
-            </div>
-            <RadioGroup value={direction} onValueChange={setDirection} className="mt-2 space-y-1">
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="clockwise" id="r1-edit" className="border-gray-600 text-orange-500 focus:ring-orange-500"/>
-                <Label htmlFor="r1-edit" className="text-gray-300">Clockwise</Label>
+          {eventType === 'QUIZ' && (
+            <>
+              <div className="space-y-4">
+                <h4 className="font-medium text-gray-200 border-b border-gray-700 pb-2">Round Rules</h4>
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="pounce-edit" checked={pounce} onCheckedChange={(checked) => setPounce(Boolean(checked))} className="data-[state=checked]:bg-orange-500 border-gray-600"/>
+                  <Label htmlFor="pounce-edit" className="text-gray-300">Enable Pounce</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="bounce-edit" checked={bounce} onCheckedChange={(checked) => setBounce(Boolean(checked))} className="data-[state=checked]:bg-orange-500 border-gray-600"/>
+                  <Label htmlFor="bounce-edit" className="text-gray-300">Enable Bounce</Label>
+                </div>
+                <RadioGroup value={direction} onValueChange={setDirection} className="mt-2 space-y-1">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="clockwise" id="r1-edit" className="border-gray-600 text-orange-500 focus:ring-orange-500"/>
+                    <Label htmlFor="r1-edit" className="text-gray-300">Clockwise</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="anticlockwise" id="r2-edit" className="border-gray-600 text-orange-500 focus:ring-orange-500"/>
+                    <Label htmlFor="r2-edit" className="text-gray-300">Anti-clockwise</Label>
+                  </div>
+                </RadioGroup>
               </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="anticlockwise" id="r2-edit" className="border-gray-600 text-orange-500 focus:ring-orange-500"/>
-                <Label htmlFor="r2-edit" className="text-gray-300">Anti-clockwise</Label>
-              </div>
-            </RadioGroup>
-          </div>
 
-          <div className="space-y-4">
-            <h4 className="font-medium text-gray-200 border-b border-gray-700 pb-2">Scoring Rules</h4>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="directRight-edit" className="text-sm text-gray-400">Direct (Correct)</Label>
-                <Input
-                  id="directRight-edit"
-                  type="number"
-                  value={directRight}
-                  onChange={(e) => setDirectRight(parseInt(e.target.value) || 0)}
-                  className="mt-1 bg-gray-800 border-gray-600"
-                />
+              <div className="space-y-4">
+                <h4 className="font-medium text-gray-200 border-b border-gray-700 pb-2">Scoring Rules</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="directRight-edit" className="text-sm text-gray-400">Direct (Correct)</Label>
+                    <Input
+                      id="directRight-edit"
+                      type="number"
+                      value={directRight}
+                      onChange={(e) => setDirectRight(parseInt(e.target.value) || 0)}
+                      className="mt-1 bg-gray-800 border-gray-600"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="pounceRight-edit" className="text-sm text-gray-400">Pounce (Correct)</Label>
+                    <Input
+                      id="pounceRight-edit"
+                      type="number"
+                      value={pounceRight}
+                      onChange={(e) => setPounceRight(parseInt(e.target.value) || 0)}
+                      className="mt-1 bg-gray-800 border-gray-600"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="pounceWrong-edit" className="text-sm text-gray-400">Pounce (Wrong)</Label>
+                    <Input
+                      id="pounceWrong-edit"
+                      type="number"
+                      value={pounceWrong}
+                      onChange={(e) => setPounceWrong(parseInt(e.target.value) || 0)}
+                      className="mt-1 bg-gray-800 border-gray-600"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="bouncePoints-edit" className="text-sm text-gray-400">Bounce Points</Label>
+                    <Input
+                      id="bouncePoints-edit"
+                      type="number"
+                      value={bouncePoints}
+                      onChange={(e) => setBouncePoints(parseInt(e.target.value) || 0)}
+                      className="mt-1 bg-gray-800 border-gray-600"
+                    />
+                  </div>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="pounceRight-edit" className="text-sm text-gray-400">Pounce (Correct)</Label>
-                <Input
-                  id="pounceRight-edit"
-                  type="number"
-                  value={pounceRight}
-                  onChange={(e) => setPounceRight(parseInt(e.target.value) || 0)}
-                  className="mt-1 bg-gray-800 border-gray-600"
-                />
-              </div>
-              <div>
-                <Label htmlFor="pounceWrong-edit" className="text-sm text-gray-400">Pounce (Wrong)</Label>
-                <Input
-                  id="pounceWrong-edit"
-                  type="number"
-                  value={pounceWrong}
-                  onChange={(e) => setPounceWrong(parseInt(e.target.value) || 0)}
-                  className="mt-1 bg-gray-800 border-gray-600"
-                />
-              </div>
-              <div>
-                <Label htmlFor="bouncePoints-edit" className="text-sm text-gray-400">Bounce Points</Label>
-                <Input
-                  id="bouncePoints-edit"
-                  type="number"
-                  value={bouncePoints}
-                  onChange={(e) => setBouncePoints(parseInt(e.target.value) || 0)}
-                  className="mt-1 bg-gray-800 border-gray-600"
-                />
-              </div>
-            </div>
-          </div>
+            </>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)} disabled={loading} className="text-gray-300 border-gray-600 hover:bg-gray-800 hover:text-white">

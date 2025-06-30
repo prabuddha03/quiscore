@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useEffect, FC } from "react";
@@ -24,7 +25,7 @@ interface Player {
 
 // This overrides the 'players' field from the Prisma `Team` type to avoid conflicts
 interface TeamWithPlayers extends Omit<Team, 'players'> {
-  players: Player[];
+  players: Prisma.JsonValue;
 }
 
 interface EditTeamModalProps {
@@ -40,15 +41,33 @@ export const EditTeamModal: FC<EditTeamModalProps> = ({ team, onTeamUpdated }) =
 
   useEffect(() => {
     setTeamName(team.name);
-    // The players from DB are Prisma.JsonValue, we need to cast them.
-    setPlayers((team.players as Player[]) || []);
+    
+    // Safely parse the 'players' JSON from the database
+    let parsedPlayers: Player[] = [];
+    const dbPlayers = team.players;
+
+    if (dbPlayers && typeof dbPlayers === 'object') {
+        if (Array.isArray(dbPlayers)) {
+            // Handles old format (simple array of players)
+            parsedPlayers = dbPlayers.map((p: any) => ({ name: p.name, isLeader: p.isLeader || false }));
+        } else {
+            // Handles new format ({ members: [], leader: {} })
+            const data = dbPlayers as any;
+            if (data.members && Array.isArray(data.members)) {
+                parsedPlayers = data.members.map((p: any) => ({
+                    name: p.name,
+                    isLeader: data.leader?.name === p.name,
+                }));
+            }
+        }
+    }
+    setPlayers(parsedPlayers);
   }, [team]);
 
   const handleAddPlayer = () => {
     if (newPlayerName.trim() === "") return;
     const newPlayer: Player = { name: newPlayerName.trim() };
     
-    // If this is the first player, make them the leader
     if (players.length === 0) {
         newPlayer.isLeader = true;
     }
@@ -60,9 +79,8 @@ export const EditTeamModal: FC<EditTeamModalProps> = ({ team, onTeamUpdated }) =
   const handleRemovePlayer = (indexToRemove: number) => {
     const newPlayers = players.filter((_, index) => index !== indexToRemove);
     
-    // If the leader was removed and there are still players left, make the first player the new leader.
-    const leaderWasRemoved = !newPlayers.some(p => p.isLeader);
-    if (leaderWasRemoved && newPlayers.length > 0) {
+    const wasLeaderRemoved = !newPlayers.some(p => p.isLeader);
+    if (wasLeaderRemoved && newPlayers.length > 0) {
       newPlayers[0].isLeader = true;
     }
 
@@ -81,12 +99,20 @@ export const EditTeamModal: FC<EditTeamModalProps> = ({ team, onTeamUpdated }) =
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // Re-construct the JSON object for the database
+      const leader = players.find(p => p.isLeader);
+      const members = players.map(({ name }) => ({ name }));
+      const playersJson: Prisma.JsonValue = {
+        members,
+        leader: leader ? { name: leader.name } : undefined,
+      };
+
       const response = await fetch(`/api/team/${team.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: teamName,
-          players: players.map(({ name, isLeader }) => ({ name, isLeader: !!isLeader })) as Prisma.JsonArray,
+          players: playersJson,
         }),
       });
 

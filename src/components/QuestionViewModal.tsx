@@ -55,7 +55,7 @@ export function QuestionViewModal({ teams, questionId, questionNumber }: Questio
     return questionScores.find(score => score.teamId === teamId);
   };
   
-  const getMethodDisplay = (method: string) => {
+  const getMethodDisplay = (method: string | null) => {
     if (!method) return null;
     const color = method.toLowerCase().includes('pounce') ? "bg-blue-500/20 text-blue-300" 
                  : method.toLowerCase().includes('bounce') ? "bg-purple-500/20 text-purple-300"
@@ -150,7 +150,8 @@ export function QuestionViewModal({ teams, questionId, questionNumber }: Questio
                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                   {Object.entries(
                     questionScores.reduce((acc, score) => {
-                      acc[score.method] = (acc[score.method] || 0) + 1;
+                      const method = score.method || 'Unknown';
+                      acc[method] = (acc[method] || 0) + 1;
                       return acc;
                     }, {} as Record<string, number>)
                   ).map(([method, count]) => (

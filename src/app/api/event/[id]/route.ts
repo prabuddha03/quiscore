@@ -23,8 +23,10 @@ export async function GET(
               scores: true,
             },
           },
+          criteria: true,
         },
       },
+      judges: true,
     },
   });
   return NextResponse.json(event);

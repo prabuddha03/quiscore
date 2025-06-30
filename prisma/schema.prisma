@@ -38,11 +38,12 @@ model Session {
 }
 
 model User {
-    id            String    @id @default(cuid())
+    id            String       @id @default(cuid())
     name          String?
-    email         String?   @unique
+    email         String?      @unique
     emailVerified DateTime?
     image         String?
+    category      UserCategory @default(FREE)
     accounts      Account[]
     sessions      Session[]
     events        Event[]
@@ -56,26 +57,53 @@ model VerificationToken {
     @@unique([identifier, token])
 }
 
+enum UserCategory {
+    FREE
+    PREMIUM
+    ADMIN
+    ENTERPRISE
+}
+
+enum EventType {
+    QUIZ
+    GENERAL
+}
+
 model Event {
-    id             String   @id @default(cuid())
+    id             String    @id @default(cuid())
     name           String
-    type           String // e.g., "quiz"
-    allowedEditors String[] // email addresses
+    type           EventType
+    subType        String? // "judge_based_individual" or "general_scoring"
+    allowedEditors String[]
     teams          Team[]
     rounds         Round[]
+    judges         Judge[]
     createdBy      String
-    createdAt      DateTime @default(now())
+    createdAt      DateTime  @default(now())
 
     createdByUser User @relation(fields: [createdBy], references: [id])
 }
 
-model Team {
+model Judge {
     id      String  @id @default(cuid())
     name    String
-    players Json?
+    email   String
     event   Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
     eventId String
     scores  Score[]
+
+    @@unique([email, eventId])
+}
+
+model Team {
+    id           String  @id @default(cuid())
+    name         String
+    players      Json?
+    documentLink String?
+    remarks      String?
+    event        Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+    eventId      String
+    scores       Score[]
 }
 
 model Round {
@@ -83,8 +111,9 @@ model Round {
     name      String
     event     Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
     eventId   String
-    rules     Json // pounce, bounce, direction, marking rules
+    rules     Json? // For quiz: pounce, bounce, etc. For general: other settings
     questions Question[]
+    criteria  Criteria[]
 }
 
 model Question {
@@ -95,14 +124,29 @@ model Question {
     scores  Score[]
 }
 
+model Criteria {
+    id        String  @id @default(cuid())
+    name      String
+    maxPoints Int?
+    round     Round   @relation(fields: [roundId], references: [id], onDelete: Cascade)
+    roundId   String
+    scores    Score[]
+}
+
 model Score {
-    id         String   @id @default(cuid())
-    team       Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+    id         String    @id @default(cuid())
+    team       Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
     teamId     String
-    question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
-    questionId String
-    method     String // e.g., "direct", "pounce-right", "custom"
+    question   Question? @relation(fields: [questionId], references: [id], onDelete: Cascade)
+    questionId String?
+    criteria   Criteria? @relation(fields: [criteriaId], references: [id], onDelete: Cascade)
+    criteriaId String?
+    judge      Judge?    @relation(fields: [judgeId], references: [id], onDelete: Cascade)
+    judgeId    String?
+    method     String? // e.g., "direct", "pounce-right", "custom"
+    pointers   String? // Judge's notes for the score
     points     Int
 
     @@unique([teamId, questionId])
+    @@unique([teamId, criteriaId, judgeId])
 }

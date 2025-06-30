@@ -56,7 +56,7 @@ export function Hero() {
             <span className="block text-transparent pb-4 bg-clip-text bg-gradient-to-r from-orange-500 to-red-500">Live Scoring</span>
           </h1>
           <p className="mt-6 max-w-md mx-auto text-lg text-gray-400 sm:max-w-xl">
-          QuiScore is a real-time scoring platform for quizzes, hackathons, debates, corporate events, and tournaments—so you can compete, while we handle the scores.
+          scorOps is a real-time scoring platform for quizzes, hackathons, debates, corporate events, and tournaments—so you can compete, while we handle the scores.
           </p>
           <div className="mt-10 flex flex-wrap justify-center gap-4">
             <motion.div
