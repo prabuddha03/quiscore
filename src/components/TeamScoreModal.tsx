@@ -35,12 +35,14 @@ interface ExistingScore {
 interface RoundRules {
   pounce: boolean;
   bounce: boolean;
-  direction: string;
+  isPounceOnly?: boolean;
   scoring: {
     directRight: number;
+    directWrong: number;
     pounceRight: number;
     pounceWrong: number;
     bouncePoints: number;
+    bounceWrong: number;
   };
 }
 
@@ -230,14 +232,14 @@ export function TeamScoreModal({ teams, questionId, eventId, onScoreAdded, round
              <Pencil className="h-3 w-3 mr-1" /> {isEditMode ? "Edit" : "Score"}
            </Button>
         </DialogTrigger>
-        <DialogContent className="max-w-screen-2xl h-[90vh] bg-gray-900 border-gray-700 text-white flex flex-col">
+        <DialogContent className="sm:max-w-screen-lg md:max-w-screen-xl h-[90vh] bg-gray-900 border-gray-700 text-white flex flex-col">
           <DialogHeader className="px-6 pt-6">
             <DialogTitle>{isEditMode ? 'Edit Scores' : 'Add Scores'} for Question {questionNumber}</DialogTitle>
             <DialogDescription className="text-gray-400">
               Set scores and scoring method for each team. Unscored teams will receive 0 points.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-6 p-6 overflow-y-auto">
+          <div className="flex-grow grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-6 overflow-y-auto">
             {teams.map((team) => (
               <div key={team.id} className="p-4 rounded-lg bg-gray-800/80 border border-gray-700/60 space-y-4 flex flex-col">
                 <div className="flex justify-between items-center">
@@ -248,9 +250,15 @@ export function TeamScoreModal({ teams, questionId, eventId, onScoreAdded, round
                 <div className="space-y-2">
                     <p className="text-sm font-medium text-gray-400">Method</p>
                     <div className="flex flex-wrap gap-2">
-                       <Button size="sm" onClick={() => handleMethodSelect(team.id, 'direct')} className={getMethodButtonStyle(team.id, 'direct')}>Direct</Button>
-                       {roundRules?.pounce && <Button size="sm" onClick={() => handleMethodSelect(team.id, 'pounce')} className={getMethodButtonStyle(team.id, 'pounce')}>Pounce</Button>}
-                       {roundRules?.bounce && <Button size="sm" onClick={() => handleMethodSelect(team.id, 'bounce')} className={getMethodButtonStyle(team.id, 'bounce')}>Bounce</Button>}
+                      {roundRules?.isPounceOnly ? (
+                          <Button size="sm" onClick={() => handleMethodSelect(team.id, 'pounce')} className={getMethodButtonStyle(team.id, 'pounce')}>Pounce</Button>
+                      ) : (
+                          <>
+                            <Button size="sm" onClick={() => handleMethodSelect(team.id, 'direct')} className={getMethodButtonStyle(team.id, 'direct')}>Direct</Button>
+                            {roundRules?.pounce && <Button size="sm" onClick={() => handleMethodSelect(team.id, 'pounce')} className={getMethodButtonStyle(team.id, 'pounce')}>Pounce</Button>}
+                            {roundRules?.bounce && <Button size="sm" onClick={() => handleMethodSelect(team.id, 'bounce')} className={getMethodButtonStyle(team.id, 'bounce')}>Bounce</Button>}
+                          </>
+                      )}
                     </div>
                 </div>
                 
@@ -258,20 +266,32 @@ export function TeamScoreModal({ teams, questionId, eventId, onScoreAdded, round
                    <p className="text-sm font-medium text-gray-400">Score</p>
                    <div className="flex items-center flex-wrap justify-between gap-2">
                        <div className="flex items-center gap-2">
-                           <Button size="icon" variant="outline" className="w-8 h-8 bg-gray-700 border-gray-600 hover:bg-gray-600" onClick={() => adjustScore(team.id, -1)}><Minus className="h-4 w-4" /></Button>
-                           <Button size="icon" variant="outline" className="w-8 h-8 bg-gray-700 border-gray-600 hover:bg-gray-600" onClick={() => adjustScore(team.id, 1)}><Plus className="h-4 w-4" /></Button>
+                           <Button size="icon" variant="outline" className="w-8 h-8 bg-gray-700 border-gray-600 hover:bg-gray-600 hover:text-gray-300" onClick={() => adjustScore(team.id, -1)}><Minus className="h-4 w-4" /></Button>
+                           <Button size="icon" variant="outline" className="w-8 h-8 bg-gray-700 border-gray-600 hover:bg-gray-600 hover:text-gray-300" onClick={() => adjustScore(team.id, 1)}><Plus className="h-4 w-4" /></Button>
                        </div>
                        {roundRules?.scoring && (
                           <div className="flex items-center gap-2">
+                              {teamMethods[team.id] === 'direct' && !roundRules.isPounceOnly && (
+                                <>
+                                  <Button size="sm" variant="outline" className="bg-green-500/10 hover:bg-green-500/20 border-green-500/20 text-green-400 h-8" onClick={() => handleQuickScore(team.id, roundRules.scoring.directRight, 'direct')}>+{roundRules.scoring.directRight}</Button>
+                                  <Button size="sm" variant="outline" className="bg-red-500/10 hover:bg-red-500/20 border-red-500/20 text-red-400 h-8" onClick={() => handleQuickScore(team.id, roundRules.scoring.directWrong, 'direct')}>{roundRules.scoring.directWrong}</Button>
+                                </>
+                              )}
                               {teamMethods[team.id] === 'pounce' && roundRules.pounce && (
                                 <>
-                                  <Button size="sm" variant="outline" className="bg-green-500/10 border-green-500/20 text-green-400 h-8" onClick={() => handleQuickScore(team.id, roundRules.scoring.pounceRight, 'pounce')}>+{roundRules.scoring.pounceRight}</Button>
-                                  <Button size="sm" variant="outline" className="bg-red-500/10 border-red-500/20 text-red-400 h-8" onClick={() => handleQuickScore(team.id, roundRules.scoring.pounceWrong, 'pounce')}>{roundRules.scoring.pounceWrong}</Button>
+                                  <Button size="sm" variant="outline" className="bg-green-500/10 hover:bg-green-500/20 border-green-500/20 text-green-400 h-8" onClick={() => handleQuickScore(team.id, roundRules.scoring.pounceRight, 'pounce')}>+{roundRules.scoring.pounceRight}</Button>
+                                  <Button size="sm" variant="outline" className="bg-red-500/10 hover:bg-red-500/20  border-red-500/20 text-red-400 h-8" onClick={() => handleQuickScore(team.id, roundRules.scoring.pounceWrong, 'pounce')}>{roundRules.scoring.pounceWrong}</Button>
+                                </>
+                              )}
+                              {teamMethods[team.id] === 'bounce' && roundRules.bounce && !roundRules.isPounceOnly &&(
+                                <>
+                                  <Button size="sm" variant="outline" className="bg-green-500/10 hover:bg-green-500/20 border-green-500/20 text-green-400 h-8" onClick={() => handleQuickScore(team.id, roundRules.scoring.bouncePoints, 'bounce')}>+{roundRules.scoring.bouncePoints}</Button>
+                                  <Button size="sm" variant="outline" className="bg-red-500/10 hover:bg-red-500/20 border-red-500/20 text-red-400 h-8" onClick={() => handleQuickScore(team.id, roundRules.scoring.bounceWrong, 'bounce')}>{roundRules.scoring.bounceWrong}</Button>
                                 </>
                               )}
                           </div>
                        )}
-                       <Button size="sm" variant="ghost" className="text-gray-400 hover:text-red-400" onClick={() => resetTeamScore(team.id)}>Reset</Button>
+                       <Button size="sm" variant="ghost" className="text-gray-400 bg-gray-700 hover:text-red-400" onClick={() => resetTeamScore(team.id)}>Reset</Button>
                    </div>
                 </div>
               </div>
