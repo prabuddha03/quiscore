@@ -473,11 +473,11 @@ export default function MonitorPage() {
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="text-center">
-                        <div className="text-lg font-bold text-green-400">{event.connectionTypes.sse}</div>
+                        <div className="text-lg font-bold text-green-400">{event.connectionTypes?.sse || 0}</div>
                         <div className="text-xs text-gray-400">SSE</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-lg font-bold text-blue-400">{event.connectionTypes.polling}</div>
+                        <div className="text-lg font-bold text-blue-400">{event.connectionTypes?.polling || 0}</div>
                         <div className="text-xs text-gray-400">Polling</div>
                       </div>
                       <div className="text-center">

@@ -167,13 +167,13 @@ export default function ScoreboardPage({
           {/* Connection Status & Controls */}
           <div className="flex items-center justify-center gap-6 mt-4">
             {/* Connection Status */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 ">
               {isConnected ? (
                 <Wifi className="w-4 h-4 text-green-400" />
               ) : (
                 <WifiOff className="w-4 h-4 text-red-400" />
               )}
-              <Badge variant={isConnected ? "default" : "destructive"} className="text-xs">
+              <Badge variant={isConnected ? "default" : "destructive"} className="text-xs bg-gray-700 text-gray-200">
                 {isConnected ? "🟢 Live" : "🔴 Disconnected"}
               </Badge>
             </div>

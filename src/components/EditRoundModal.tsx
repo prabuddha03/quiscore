@@ -157,7 +157,7 @@ export function EditRoundModal({ round, onRoundUpdated, eventType }: EditRoundMo
                       onClick={() => setRoundType('direct')}
                       className={`${roundType === 'direct' ? 'bg-orange-500 hover:bg-orange-600' : 'border-gray-600 hover:bg-gray-800'}`}
                     >
-                      Direct Round
+                      Normal Round
                     </Button>
                     <Button
                       type="button"

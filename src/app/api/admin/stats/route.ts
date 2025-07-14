@@ -17,8 +17,8 @@ export async function GET() {
     // Get system resource usage
     const systemStats = getSystemStats();
     
-    // Get active events overview
-    const activeEvents = scoreboardCache.getActiveEvents();
+    // Get active events overview with detailed information
+    const activeEvents = await getActiveEventsWithDetails();
     
     // Calculate performance metrics
     const performanceMetrics = {
@@ -207,4 +207,48 @@ function generateRecommendations(
   }
   
   return recommendations;
+}
+
+async function getActiveEventsWithDetails() {
+  try {
+    const cacheStats = scoreboardCache.getStats();
+    const activeEvents = [];
+    
+    // Get event names from database for cached events
+    const eventIds = cacheStats.cacheDetails.map(detail => detail.eventId);
+    
+    if (eventIds.length === 0) {
+      return [];
+    }
+    
+    const events = await dbUtils.safeQuery(
+      () => prisma.event.findMany({
+        where: { id: { in: eventIds } },
+        select: { id: true, name: true }
+      }),
+      'admin-stats-events'
+    );
+    
+    // Create a map for quick lookup
+    const eventNameMap = new Map(events.map(event => [event.id, event.name]));
+    
+    // Transform cache details into expected format
+    for (const detail of cacheStats.cacheDetails) {
+      activeEvents.push({
+        eventId: detail.eventId,
+        eventName: eventNameMap.get(detail.eventId) || `Event ${detail.eventId}`,
+        subscriberCount: detail.subscriberCount,
+        lastActivity: new Date(detail.lastAccessed).toISOString(),
+        connectionTypes: {
+          sse: detail.subscriberCount, // All subscribers are SSE in the cache
+          polling: 0 // No polling tracked in cache
+        }
+      });
+    }
+    
+    return activeEvents;
+  } catch (error) {
+    console.error('Error getting active events with details:', error);
+    return [];
+  }
 } 
