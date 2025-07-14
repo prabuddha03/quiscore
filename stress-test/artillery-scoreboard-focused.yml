@@ -1,0 +1,66 @@
+config:
+  target: "https://scorops-ljt35.ondigitalocean.app/"
+  socketio:
+    # Socket.IO specific configuration matching your app setup
+    path: "/api/socket/io"
+    transports: ["websocket", "polling"]
+    upgrade: true
+    rememberUpgrade: true
+    timeout: 20000
+    forceNew: true
+    addTrailingSlash: false
+  phases:
+    - duration: 120 # 2 minutes
+      arrivalRate: 50 # 50 users per second
+      name: "Scoreboard Viewer Load Test"
+  engines:
+    socketio: {}
+  processor: "./scoreboard-test-functions.js"
+
+scenarios:
+  - name: "Scoreboard Viewer Simulation"
+    engine: socketio
+    flow:
+      # Connect to Socket.IO
+      - emit:
+          channel: "connection"
+      - think: 0.5 # Brief connection delay
+
+      # Join the specific event room for scoreboard viewing
+      - emit:
+          channel: "join-room"
+          data: "event_cmctdcrkw009p7z52xknf1dc6"
+
+      # Simulate typical scoreboard viewing session
+      # Users typically watch for 30-60 seconds during live events
+      - think: "{{ $randomInt(30, 60) }}"
+
+      # Leave the room cleanly
+      - emit:
+          channel: "leave-room"
+          data: "event_cmctdcrkw009p7z52xknf1dc6"
+
+      # Disconnect
+      - emit:
+          channel: "disconnect"
+
+# Monitor specific scoreboard metrics
+plugins:
+  metrics-by-endpoint:
+    useOnlyRequestNames: true
+
+# Variables for the specific event
+variables:
+  event_id: "cmctdcrkw009p7z52xknf1dc6"
+  scoreboard_url: "/event/cmctdcrkw009p7z52xknf1dc6/scoreboard"
+
+# Environment configurations
+environments:
+  production:
+    target: "https://scorops-ljt35.ondigitalocean.app/"
+    socketio:
+      path: "/api/socket/io"
+  development:
+    target: "http://localhost:3000"
+    socketio:
+      path: "/api/socket/io"

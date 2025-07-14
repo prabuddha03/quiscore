@@ -144,21 +144,22 @@ export function CreateEventModal() {
 
   return (
     <Dialog open={isCreateEventModalOpen} onOpenChange={closeCreateEventModal}>
-      <DialogContent className="sm:max-w-lg bg-gray-900 border-gray-700 text-white">
+      <DialogContent className="sm:max-w-lg bg-gray-900 border-gray-700 text-white max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Create New Event</DialogTitle>
           <DialogDescription>
             Fill in the details to create a new event. Select a type to get started.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 space-y-4">
+          <div className="flex-1 overflow-y-auto pr-2 pt-3">
             {/* Common Fields */}
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 pb-4">
               <Label htmlFor="name">Event Name</Label>
               <Input id="name" placeholder="e.g., Annual Tech Fest" value={name} onChange={(e) => setName(e.target.value)} className="bg-gray-800 border-gray-600"/>
             </div>
             
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 pb-4">
               <Label htmlFor="type">Event Type</Label>
               <Select value={eventType} onValueChange={setEventType}>
                   <SelectTrigger className="bg-gray-800 border-gray-600"><SelectValue placeholder="Select event type" /></SelectTrigger>
@@ -167,11 +168,12 @@ export function CreateEventModal() {
                       <SelectItem value="GENERAL">General</SelectItem>
                   </SelectContent>
               </Select>
+              
             </div>
 
             {/* Quiz Specific Fields */}
             {eventType === 'QUIZ' && (
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 pb-4">
                 <Label htmlFor="teams-quiz">Number of Teams</Label>
                 <Input id="teams-quiz" type="number" placeholder="e.g., 8" value={teamCount} onChange={handleTeamCountChange} className="bg-gray-800 border-gray-600"/>
               </div>
@@ -181,7 +183,7 @@ export function CreateEventModal() {
             {eventType === 'GENERAL' && (
               <div className="space-y-4 rounded-md border border-gray-700 p-4">
                 <h3 className="text-lg font-medium text-white">General Event Setup</h3>
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 pb-4">
                   <Label htmlFor="sub-type">Scoring Type</Label>
                   <Select value={eventSubType} onValueChange={setEventSubType}>
                       <SelectTrigger className="bg-gray-800 border-gray-600"><SelectValue placeholder="Select scoring type" /></SelectTrigger>
@@ -195,7 +197,7 @@ export function CreateEventModal() {
                 <div className="border-t border-gray-700 my-2"></div>
                 <h4 className="text-md font-medium text-white">Team Setup</h4>
                 
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 pb-4">
                   <Label htmlFor="teams-general">Number of Teams (if not using CSV)</Label>
                   <Input id="teams-general" type="number" placeholder="e.g., 8" value={teamCount} onChange={handleTeamCountChange} className="bg-gray-800 border-gray-600 flex-grow" disabled={!!uploadedFile}/>
                 </div>
@@ -205,22 +207,23 @@ export function CreateEventModal() {
 
                 <p className="text-xs text-gray-400">First, configure and download the sample file. Then, fill it out and upload it here.</p>
                 
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
+                <div className="grid grid-cols-2">
+                    <div className="space-y-1">
                         <Label htmlFor="members-per-team">Members per Team</Label>
                         <Input id="members-per-team" type="number" value={membersPerTeam} onChange={handleMembersPerTeamChange} className="bg-gray-800 border-gray-600"/>
                     </div>
-                    <div className="flex items-center space-x-2 pt-6">
-                        <Checkbox id="has-leader" checked={hasLeader} onCheckedChange={(c) => setHasLeader(c as boolean)} />
-                        <Label htmlFor="has-leader">Has a Leader?</Label>
-                    </div>
+                    
                 </div>
+                <div className="flex items-center space-x-2 pt-2">
+                        <Checkbox id="has-leader" className="bg-gray-200 border-gray-600" checked={hasLeader} onCheckedChange={(c) => setHasLeader(c as boolean)} />
+                        <Label htmlFor="has-leader">Have a Team Leader?</Label>
+                    </div>
                  <div className="flex items-center space-x-2">
-                    <Checkbox id="has-doc-link" checked={hasDocumentLink} onCheckedChange={(c) => setHasDocumentLink(c as boolean)} />
-                    <Label htmlFor="has-doc-link">Has a Document Link?</Label>
+                    <Checkbox id="has-doc-link" className="bg-gray-200 border-gray-600" checked={hasDocumentLink} onCheckedChange={(c) => setHasDocumentLink(c as boolean)} />
+                    <Label htmlFor="has-doc-link">Have any submitted Document Link?</Label>
                 </div>
 
-                <div className="flex flex-col items-center gap-2">
+                <div className="flex flex-col items-center gap-2 pt-2">
                     <Button type="button" variant="outline" onClick={generateSampleCsv} className="w-full">
                         <FileText className="h-4 w-4 mr-2"/>
                         Download CSV Sample
@@ -241,8 +244,9 @@ export function CreateEventModal() {
                 )}
               </div>
             )}
-          <DialogFooter>
-            <Button variant="outline" type="button" onClick={closeCreateEventModal}>Cancel</Button>
+          </div>
+          <DialogFooter className="pt-2">
+            
             <Button type="submit" disabled={loading} className="bg-orange-500 hover:bg-orange-600">
               {loading ? "Creating..." : "Create Event"}
             </Button>

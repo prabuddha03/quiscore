@@ -8,11 +8,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Event, Team, Score, Round, Question } from "@prisma/client";
-import { useSocket } from "@/hooks/use-socket";
+// Keep Socket.IO import but don't use it - as requested by user
+// import { useSocket } from "@/hooks/use-socket";
 import { motion, AnimatePresence } from "framer-motion";
-import { Medal } from "lucide-react";
+import { Medal, RefreshCw, Wifi, WifiOff, Clock } from "lucide-react";
 import { RoundScoreModal } from "@/components/RoundScoreModal";
+import { useScoreboardSSE } from "@/hooks/use-scoreboard-sse";
 import Link from "next/link";
 import {
   Tooltip,
@@ -36,8 +39,19 @@ export default function ScoreboardPage({
 }) {
   const { id } = use(params);
   const [event, setEvent] = useState<EventWithRelations | null>(null);
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const { socket, isConnected } = useSocket(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000');
+  
+  // SSE hook for real-time scoreboard data
+  const {
+    scoreboard,
+    isConnected,
+    isLoading,
+    error,
+    lastUpdateTime,
+    refresh,
+  } = useScoreboardSSE({ eventId: id });
+
+  // Keep Socket.IO code but don't use it - as requested by user
+  // const { socket, isConnected } = useSocket(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000');
 
   const fetchEvent = useCallback(async () => {
     const res = await fetch(`/api/event/${id}`);
@@ -51,6 +65,8 @@ export default function ScoreboardPage({
     fetchEvent();
   }, [fetchEvent]);
 
+  // Socket.IO logic commented out but kept - as requested by user
+  /*
   useEffect(() => {
     if (socket && isConnected) {
       socket.emit("join-room", `event_${id}`);
@@ -72,17 +88,38 @@ export default function ScoreboardPage({
       };
     }
   }, [socket, isConnected, id, fetchEvent]);
+  */
 
   const calculateTotalScore = (scores: Score[] | undefined) => {
     if (!scores || scores.length === 0) return 0;
     return scores.reduce((total, score) => total + score.points, 0);
   };
 
-  const sortedTeams = [...(event?.teams || [])].sort((a, b) => {
-    const scoreA = calculateTotalScore(a.scores);
-    const scoreB = calculateTotalScore(b.scores);
-    return sortOrder === "desc" ? scoreB - scoreA : scoreA - scoreB;
+  // Use SSE data if available, otherwise fall back to REST API data
+  const teamsToDisplay = scoreboard?.teams || (event?.teams || []);
+  const sortedTeams = [...teamsToDisplay].sort((a, b) => {
+    // Use type guard to properly handle the union type
+    const scoreA = 'totalScore' in a ? a.totalScore : calculateTotalScore(a.scores);
+    const scoreB = 'totalScore' in b ? b.totalScore : calculateTotalScore(b.scores);
+    return scoreB - scoreA; // Always descending
   });
+
+  const formatLastUpdate = (date: Date | null) => {
+    if (!date) return "Never";
+    
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffSeconds = Math.floor(diffMs / 1000);
+    const diffMinutes = Math.floor(diffSeconds / 60);
+
+    if (diffSeconds < 60) {
+      return `${diffSeconds}s ago`;
+    } else if (diffMinutes < 60) {
+      return `${diffMinutes}m ago`;
+    } else {
+      return date.toLocaleTimeString();
+    }
+  };
 
   if (!event) {
     return (
@@ -115,22 +152,62 @@ export default function ScoreboardPage({
     return "text-white";
   }
 
+  const getTeamScore = (team: TeamWithScores | { totalScore: number }) => {
+    return 'totalScore' in team ? team.totalScore : calculateTotalScore(team.scores);
+  };
+
   return (
     <div className="bg-black min-h-screen text-white">
       <div className="container mx-auto py-8 px-4">
-        {/* Header */}
+        {/* Header with Connection Status */}
         <div className="text-center mb-8">
           <h1 className="text-5xl font-bold text-white mb-2">{event.name}</h1>
           <p className="text-lg text-gray-400">Live Scoreboard</p>
-          <div className="inline-flex items-center gap-2 text-sm font-medium mt-2">
-            <span className={`h-2 w-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></span>
-            <span className={isConnected ? 'text-green-400' : 'text-red-400'}>
-              {isConnected ? "Live" : "Connecting..."}
-            </span>
+          
+          {/* Connection Status & Controls */}
+          <div className="flex items-center justify-center gap-6 mt-4">
+            {/* Connection Status */}
+            <div className="flex items-center gap-2 ">
+              {isConnected ? (
+                <Wifi className="w-4 h-4 text-green-400" />
+              ) : (
+                <WifiOff className="w-4 h-4 text-red-400" />
+              )}
+              <Badge variant={isConnected ? "default" : "destructive"} className="text-xs bg-gray-700 text-gray-200">
+                {isConnected ? "🟢 Live" : "🔴 Disconnected"}
+              </Badge>
+            </div>
+
+            {/* Last Update Time */}
+            {lastUpdateTime && (
+              <div className="flex items-center gap-1 text-xs text-gray-400">
+                <Clock className="w-3 h-3" />
+                {formatLastUpdate(lastUpdateTime)}
+              </div>
+            )}
+
+            {/* Manual Refresh Button */}
+            <Button
+              onClick={refresh}
+              variant="outline"
+              size="sm"
+              disabled={isLoading}
+              className="text-xs"
+            >
+              <RefreshCw className={`w-3 h-3 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mt-2 text-red-400 text-sm">
+              {error}
+            </div>
+          )}
         </div>
 
-        {/* Main Scoreboard */}
+        {/* Main Scoreboard (Visual Display) */}
         <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           <AnimatePresence>
             {sortedTeams.map((team, index) => (
@@ -154,13 +231,15 @@ export default function ScoreboardPage({
                             {getMedal(index)}
                           </CardHeader>
                           <CardContent className="text-center">
-                            <p
-                              className={`text-6xl font-bold ${getScoreColor(
-                                index
-                              )}`}
+                            <motion.p
+                              key={getTeamScore(team)} // Re-animate when score changes
+                              initial={{ scale: 1.2, color: "#f59e0b" }}
+                              animate={{ scale: 1, color: getScoreColor(index) }}
+                              transition={{ duration: 0.5 }}
+                              className={`text-6xl font-bold ${getScoreColor(index)}`}
                             >
-                              {calculateTotalScore(team.scores)}
-                            </p>
+                              {getTeamScore(team)}
+                            </motion.p>
                             <Badge className="mt-2 bg-gray-700 text-gray-300 border-0">
                               Rank #{index + 1}
                             </Badge>

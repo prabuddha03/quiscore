@@ -1,0 +1,81 @@
+config:
+  target: "https://scorops-ljt35.ondigitalocean.app"
+  socketio:
+    # Match your production Socket.IO setup
+    path: "/api/socket/io"
+    transports: ["websocket", "polling"]
+    upgrade: true
+    rememberUpgrade: true
+    timeout: 30000 # Increased timeout for production
+    forceNew: false # Allow connection reuse
+    addTrailingSlash: false
+  phases:
+    # Start with lower load and ramp up
+    - duration: 60 # 1 minute ramp up
+      arrivalRate: 10 # Start with 10 users/second
+      name: "Ramp up phase"
+    - duration: 120 # 2 minutes sustained load
+      arrivalRate: 25 # Reduced from 50 to avoid overload
+      name: "Sustained load phase"
+    - duration: 60 # 1 minute ramp down
+      arrivalRate: 5 # Ramp down
+      name: "Ramp down phase"
+  engines:
+    socketio: {}
+  processor: "./production-test-functions.js"
+
+scenarios:
+  # Main route testing (homepage load)
+  - name: "Homepage Load Test"
+    weight: 20 # 20% of traffic
+    flow:
+      - get:
+          url: "/"
+          headers:
+            User-Agent: "Artillery-LoadTest-Homepage"
+      - think: 3
+
+  # Scoreboard viewer testing (primary focus)
+  - name: "Scoreboard Viewer Load Test"
+    weight: 80 # 80% of traffic - main focus
+    engine: socketio
+    flow:
+      # Connect to Socket.IO
+      - emit:
+          channel: "connection"
+      - think: 1
+
+      # Join the specific event room
+      - emit:
+          channel: "join-room"
+          data: "event_cmctdcrkw009p7z52xknf1dc6"
+
+      # Simulate realistic scoreboard viewing (30-90 seconds)
+      - think: "{{ $randomInt(30, 90) }}"
+
+      # Leave room cleanly
+      - emit:
+          channel: "leave-room"
+          data: "event_cmctdcrkw009p7z52xknf1dc6"
+
+      # Disconnect
+      - emit:
+          channel: "disconnect"
+
+# Enhanced monitoring for production
+plugins:
+  metrics-by-endpoint:
+    useOnlyRequestNames: true
+  expect:
+    # Set expectations for success criteria
+    thresholds:
+      - http.response_time.p95: 2000 # 95% of requests under 2s
+      - http.response_time.p99: 5000 # 99% of requests under 5s
+      - socketio.connection_errors: 0 # No connection errors
+      - vusers.failed: 0 # No failed users
+
+# Production variables
+variables:
+  event_id: "cmctdcrkw009p7z52xknf1dc6"
+  base_url: "https://scorops-ljt35.ondigitalocean.app"
+  scoreboard_path: "/event/cmctdcrkw009p7z52xknf1dc6/scoreboard"

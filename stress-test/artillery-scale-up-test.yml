@@ -1,0 +1,66 @@
+config:
+  target: "https://scorops-ljt35.ondigitalocean.app"
+  phases:
+    # Aggressive scaling for 512MB RAM / 1 vCPU limits
+    - duration: 30
+      arrivalRate: 20 # Start higher since 10 worked well
+      name: "Scale test - 20 users/sec"
+    - duration: 45
+      arrivalRate: 40 # Jump to 40 users/sec
+      name: "Scale test - 40 users/sec"
+    - duration: 45
+      arrivalRate: 60 # Push to 60 users/sec
+      name: "Scale test - 60 users/sec"
+    - duration: 30
+      arrivalRate: 80 # Stress test - 80 users/sec
+      name: "Stress test - 80 users/sec"
+    - duration: 15
+      arrivalRate: 100 # Breaking point test - 100 users/sec
+      name: "Breaking point - 100 users/sec"
+  socketio:
+    path: "/api/socket/io"
+    transports: ["websocket", "polling"]
+    timeout: 15000 # Reduced timeout to fail faster
+    upgrade: true
+    addTrailingSlash: false
+    forceNew: false # Allow connection reuse to save memory
+  # Monitor resource usage more closely
+  plugins:
+    expect:
+      thresholds:
+        - http.response_time.p95: 3000 # Alert if 95% responses > 3s
+        - http.response_time.p99: 5000 # Alert if 99% responses > 5s
+        - vusers.failed: 10 # Alert if >10% users fail
+        - errors.Error: 20 # Alert if >20 errors total
+
+scenarios:
+  # Heavy Socket.IO load (most resource intensive for 512MB RAM)
+  - name: "Scoreboard Socket Connection"
+    weight: 60 # Increased - Socket.IO uses more memory
+    engine: socketio
+    flow:
+      - emit:
+          channel: "connection"
+      - think: 0.5 # Faster connections to stress test
+      - emit:
+          channel: "join-room"
+          data: "event_cmctdcrkw009p7z52xknf1dc6"
+      - think: 30 # Stay connected longer to hold memory
+      - emit:
+          channel: "disconnect"
+
+  # Scoreboard page load (database + rendering)
+  - name: "Scoreboard Page Load"
+    weight: 30 # Reduced weight
+    flow:
+      - get:
+          url: "/event/cmctdcrkw009p7z52xknf1dc6/scoreboard"
+      - think: 1 # Faster requests to increase load
+
+  # Homepage testing (lightest load)
+  - name: "Homepage Load"
+    weight: 10
+    flow:
+      - get:
+          url: "/"
+      - think: 1
