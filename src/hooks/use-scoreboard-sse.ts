@@ -59,11 +59,21 @@ export function useScoreboardSSE({ eventId, enabled = true }: UseScoreboardSSEOp
 
   // HTTP Polling fallback
   const startPolling = useCallback(() => {
-    if (!eventId || !enabled) return;
+    if (!eventId || !enabled) {
+      console.log('🔄 Cannot start polling - missing eventId or disabled');
+      return;
+    }
+    
+    // Don't start polling if SSE is already connected
+    if (connectionType === 'sse' && isConnected) {
+      console.log('🔄 SSE already connected, skipping polling');
+      return;
+    }
     
     console.log(`🔄 Starting HTTP polling for event: ${eventId}`);
     setConnectionType('polling');
     setIsConnected(true);
+    setError(null);
     
     // Clear existing polling interval
     if (pollingIntervalRef.current) {
@@ -72,6 +82,7 @@ export function useScoreboardSSE({ eventId, enabled = true }: UseScoreboardSSEOp
     
     // Poll every 10 seconds (more conservative than SSE)
     pollingIntervalRef.current = setInterval(async () => {
+      console.log(`🔄 Polling scoreboard for event: ${eventId}`);
       try {
         const response = await fetch(`/api/scoreboard/${eventId}`);
         if (!response.ok) {
@@ -84,7 +95,8 @@ export function useScoreboardSSE({ eventId, enabled = true }: UseScoreboardSSEOp
         console.log('📊 Scoreboard updated via polling');
       } catch (err) {
         console.error('❌ Polling error:', err);
-        // Don't disconnect on single polling failure
+        setError(`Polling error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        // Don't disconnect on single polling failure, but log it
       }
     }, 10000); // Poll every 10 seconds
     
@@ -117,13 +129,35 @@ export function useScoreboardSSE({ eventId, enabled = true }: UseScoreboardSSEOp
     eventSourceRef.current = eventSource;
 
     let sseConnected = false;
+    
+    // Set a timeout to fallback to polling if SSE doesn't connect
+    // Use longer timeout to give SSE more time to establish
+    const timeoutMs = 15000; // 15 seconds should be enough for most cases
+    
+    const connectionTimeout = setTimeout(() => {
+      if (!sseConnected) {
+        console.log(`⏰ SSE connection timeout after ${timeoutMs}ms, falling back to polling`);
+        eventSource.close();
+        eventSourceRef.current = null;
+        setError('SSE connection timeout, using polling mode');
+        startPolling();
+      }
+    }, timeoutMs);
 
     eventSource.onopen = () => {
       sseConnected = true;
       setIsConnected(true);
       setConnectionType('sse');
       setError(null);
-      console.log('🟢 SSE connection established');
+      console.log('🟢 SSE connection established successfully');
+      console.log('📊 SSE connection details:', {
+        eventId,
+        readyState: eventSource.readyState,
+        url: eventSource.url
+      });
+      
+      // Clear the connection timeout
+      clearTimeout(connectionTimeout);
       
       // Clear any reconnection timeout
       if (reconnectTimeoutRef.current) {
@@ -133,17 +167,33 @@ export function useScoreboardSSE({ eventId, enabled = true }: UseScoreboardSSEOp
 
     eventSource.onmessage = (event) => {
       try {
+        // Make sure we're still considered connected
+        if (!sseConnected) {
+          sseConnected = true;
+          setIsConnected(true);
+          setConnectionType('sse');
+          setError(null);
+          console.log('🟢 SSE connection confirmed via message');
+        }
+        
         const newScoreboard = JSON.parse(event.data);
         setScoreboard(newScoreboard);
         setLastUpdateTime(new Date());
-        console.log('📊 Scoreboard updated via SSE');
+        console.log('📊 Scoreboard updated via SSE', {
+          eventId,
+          teamsCount: newScoreboard.teams?.length || 0,
+          lastUpdated: newScoreboard.lastUpdated
+        });
       } catch (err) {
-        console.error('❌ Failed to parse SSE message:', err);
+        console.error('❌ Failed to parse SSE message:', err, 'Raw data:', event.data);
       }
     };
 
     eventSource.onerror = () => {
       console.log('🔴 SSE connection error or lost');
+      
+      // Clear the connection timeout
+      clearTimeout(connectionTimeout);
       
       // Close the failed SSE connection
       if (eventSourceRef.current) {
@@ -151,16 +201,24 @@ export function useScoreboardSSE({ eventId, enabled = true }: UseScoreboardSSEOp
         eventSourceRef.current = null;
       }
       
-      // If we never successfully connected via SSE, or if this is a capacity issue,
-      // fall back to polling immediately
-      if (!sseConnected || connectionType === 'disconnected') {
-        console.log('🔄 SSE failed, falling back to HTTP polling');
-        startPolling();
+      // Set disconnected state immediately
+      setIsConnected(false);
+      setConnectionType('disconnected');
+      
+             // If we never successfully connected via SSE, fall back to polling immediately
+       if (!sseConnected) {
+         console.log('🔄 SSE failed to connect, falling back to HTTP polling immediately');
+         console.log('🔍 SSE failure details:', {
+           eventId,
+           readyState: eventSource.readyState,
+           url: eventSource.url,
+           environment: process.env.NODE_ENV
+         });
+         setError('SSE connection failed, using polling mode');
+         startPolling();
       } else {
         // If we were previously connected, try to reconnect after a delay
-        setIsConnected(false);
-        setConnectionType('disconnected');
-        
+        console.log('🔄 SSE connection lost, attempting reconnection...');
         reconnectTimeoutRef.current = setTimeout(() => {
           if (enabled) {
             console.log('🔄 Attempting SSE reconnection...');
@@ -181,14 +239,24 @@ export function useScoreboardSSE({ eventId, enabled = true }: UseScoreboardSSEOp
   useEffect(() => {
     if (!enabled) return;
     
+    console.log(`🚀 Initializing scoreboard connection for event: ${eventId}`);
+    
     // First fetch initial data
     fetchInitialData().then(() => {
-      // Then try SSE connection
-      connectSSE();
+      // Give a small delay to ensure page is stable before starting SSE
+      setTimeout(() => {
+        console.log('🔌 Starting SSE connection after initial data load');
+        connectSSE();
+      }, 1000); // 1 second delay
+    }).catch((error) => {
+      console.error('❌ Failed to fetch initial data, falling back to polling:', error);
+      setError('Failed to load initial data, using polling mode');
+      startPolling();
     });
 
     // Cleanup on unmount
     return () => {
+      console.log(`🔄 Cleaning up scoreboard connection for event: ${eventId}`);
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
       }
@@ -197,7 +265,7 @@ export function useScoreboardSSE({ eventId, enabled = true }: UseScoreboardSSEOp
       }
       stopPolling();
     };
-  }, [eventId, enabled, fetchInitialData, connectSSE, stopPolling]);
+  }, [eventId, enabled, fetchInitialData, connectSSE, stopPolling, startPolling]);
 
   return {
     scoreboard,
