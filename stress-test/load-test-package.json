@@ -1,0 +1,24 @@
+{
+  "name": "quiscore-load-test",
+  "version": "1.0.0",
+  "description": "Artillery load test for QuiScore Socket.IO functionality",
+  "main": "load-test-functions.js",
+  "scripts": {
+    "test": "artillery run artillery-load-test.yml",
+    "test:production": "artillery run artillery-load-test.yml --environment production",
+    "test:staging": "artillery run artillery-load-test.yml --environment staging",
+    "test:development": "artillery run artillery-load-test.yml --environment development",
+    "test:report": "artillery run artillery-load-test.yml --output report.json && artillery report report.json",
+    "install-artillery": "npm install -g artillery@latest"
+  },
+  "dependencies": {
+    "artillery": "^2.0.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/uuid": "^9.0.0"
+  },
+  "keywords": ["artillery", "load-test", "socketio", "performance", "testing"],
+  "author": "QuiScore Team",
+  "license": "MIT"
+}

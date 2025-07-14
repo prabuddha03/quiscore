@@ -1,0 +1,51 @@
+config:
+  target: "https://scorops-ljt35.ondigitalocean.app"
+  phases:
+    # Start VERY small to test if it works
+    - duration: 30
+      arrivalRate: 2 # Just 2 users per second
+      name: "Initial test phase"
+    - duration: 60
+      arrivalRate: 5 # Increase to 5 users per second
+      name: "Light load phase"
+    - duration: 60
+      arrivalRate: 10 # Increase to 10 users per second
+      name: "Medium load phase"
+  socketio:
+    path: "/api/socket/io"
+    transports: ["websocket", "polling"]
+    timeout: 20000
+    upgrade: true
+    addTrailingSlash: false
+
+scenarios:
+  # Test main homepage
+  - name: "Homepage Load"
+    weight: 30
+    flow:
+      - get:
+          url: "/"
+      - think: 2
+
+  # Test scoreboard page (HTTP request)
+  - name: "Scoreboard Page Load"
+    weight: 40
+    flow:
+      - get:
+          url: "/event/cmctdcrkw009p7z52xknf1dc6/scoreboard"
+      - think: 5
+
+  # Test Socket.IO for real-time scoreboard
+  - name: "Scoreboard Socket Connection"
+    weight: 30
+    engine: socketio
+    flow:
+      - emit:
+          channel: "connection"
+      - think: 1
+      - emit:
+          channel: "join-room"
+          data: "event_cmctdcrkw009p7z52xknf1dc6"
+      - think: 15 # Stay connected for 15 seconds
+      - emit:
+          channel: "disconnect"

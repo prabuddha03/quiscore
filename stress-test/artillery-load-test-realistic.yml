@@ -1,0 +1,120 @@
+config:
+  target: "https://scorops-ljt35.ondigitalocean.app/"
+  socketio:
+    # Socket.IO specific configuration matching your app setup
+    path: "/api/socket/io"
+    transports: ["websocket", "polling"]
+    upgrade: true
+    rememberUpgrade: true
+    timeout: 20000
+    forceNew: true
+    addTrailingSlash: false
+  phases:
+    - duration: 120 # 2 minutes
+      arrivalRate: 50 # 50 users per second
+      name: "Realistic scoreboard load test"
+  engines:
+    socketio: {}
+  processor: "./realistic-load-test-functions.js"
+
+scenarios:
+  - name: "Real QuiScore Event Socket.IO Load Test"
+    engine: socketio
+    flow:
+      # Connect to socket
+      - emit:
+          channel: "connection"
+      - think: 1 # Brief pause after connection
+
+      # Join event room (this is what actually happens in your app)
+      - emit:
+          channel: "join-room"
+          data: "event_{{ event_id }}"
+
+      # Simulate judge activity - wait while "judging"
+      - think: 3
+
+      # Simulate score submission via HTTP API (real workflow)
+      - post:
+          url: "/api/judge/score"
+          headers:
+            Content-Type: "application/json"
+          json:
+            teamId: "team_{{ $randomString() }}"
+            roundId: "round_{{ $randomString() }}"
+            judgeId: "judge_{{ $randomString() }}"
+            scores:
+              - criteriaId: "criteria_{{ $randomString() }}"
+                points: "{{ $randomInt(1, 100) }}"
+                pointers: "Good performance"
+
+      # Wait for score-updated event (real-time update)
+      - think: 2
+
+      # Continue "judging" session
+      - think: 8
+
+      # Leave the room before disconnecting
+      - emit:
+          channel: "leave-room"
+          data: "event_{{ event_id }}"
+
+      # Disconnect
+      - emit:
+          channel: "disconnect"
+
+  # Additional scenario for scoreboard viewers (non-judges)
+  - name: "Scoreboard Viewer Load Test"
+    weight: 30 # 30% of users are just viewers
+    engine: socketio
+    flow:
+      # Connect and immediately join event room
+      - emit:
+          channel: "connection"
+      - think: 0.5
+
+      # Join event room as viewer
+      - emit:
+          channel: "join-room"
+          data: "event_{{ event_id }}"
+
+      # Viewers stay connected longer to watch real-time updates
+      - think: 25
+
+      # Leave room and disconnect
+      - emit:
+          channel: "leave-room"
+          data: "event_{{ event_id }}"
+      - emit:
+          channel: "disconnect"
+
+# Metrics and monitoring configuration
+plugins:
+  metrics-by-endpoint:
+    useOnlyRequestNames: true
+  statsd:
+    # Optional: Send metrics to StatsD/DataDog for monitoring
+    # host: "localhost"
+    # port: 8125
+
+# Environment configurations
+environments:
+  production:
+    target: "https://www.xyz.com"
+    socketio:
+      path: "/api/socket/io"
+  staging:
+    target: "https://staging.xyz.com"
+    socketio:
+      path: "/api/socket/io"
+  development:
+    target: "http://localhost:3000"
+    socketio:
+      path: "/api/socket/io"
+
+# Variables for different test intensities
+variables:
+  event_id: "cmctdcrkw009p7z52xknf1dc6" # Your actual event ID
+  team_count: 20
+  judge_count: 5
+  criteria_count: 4

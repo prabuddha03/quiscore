@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { getIo } from "@/lib/socket";
+import { scoreboardCache } from "@/lib/scoreboard-cache";
 
 const scoreSchema = z.object({
   teamId: z.string(),
@@ -75,11 +75,18 @@ export async function POST(req: Request) {
 
     await prisma.$transaction(transaction);
 
-    // Notify clients
+    // Recalculate and broadcast updated scoreboard to SSE clients
     if (round.eventId) {
-      const io = getIo();
-      if (io) {
-        io.to(`event_${round.eventId}`).emit("score-updated");
+      try {
+        console.log(`🎯 Score submitted for event ${round.eventId}, recalculating scoreboard...`);
+        
+        // Force refresh scoreboard cache and broadcast to SSE clients
+        await scoreboardCache.calculateAndCache(round.eventId, true);
+        
+        console.log(`📡 Scoreboard updated and broadcasted for event ${round.eventId}`);
+      } catch (error) {
+        console.error('Error broadcasting scoreboard update:', error);
+        // Don't fail the request if broadcasting fails
       }
     }
 

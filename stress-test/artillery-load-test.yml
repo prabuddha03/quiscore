@@ -1,0 +1,62 @@
+config:
+  target: "https://www.xyz.com"
+  socketio:
+    # Socket.IO specific configuration
+    transports: ["websocket", "polling"]
+    upgrade: true
+    rememberUpgrade: true
+    timeout: 20000
+    forceNew: true
+  phases:
+    - duration: 120 # 2 minutes
+      arrivalRate: 50 # 50 users per second
+      name: "Load test phase"
+  engines:
+    socketio: {}
+  processor: "./load-test-functions.js"
+
+scenarios:
+  - name: "Scoreboard Socket.IO Load Test"
+    engine: socketio
+    flow:
+      - emit:
+          channel: "connection"
+      - think: 1 # Wait 1 second after connection
+
+      # Join the scoreboard
+      - emit:
+          channel: "join-scoreboard"
+          data:
+            scoreboardId: "abc123"
+            userId: "test-user-{{ $randomString() }}"
+
+      # Wait 5 seconds as specified
+      - think: 5
+
+      # Submit a score
+      - emit:
+          channel: "submit-score"
+          data:
+            userId: "test-user-{{ $randomString() }}"
+            score: "{{ $randomInt(1, 100) }}"
+
+      # Wait additional time to reach 15 seconds total
+      - think: 9
+
+      # Disconnect
+      - emit:
+          channel: "disconnect"
+
+# Additional configuration for metrics and reporting
+plugins:
+  metrics-by-endpoint:
+    useOnlyRequestNames: true
+
+# Environment variables for different test scenarios
+environments:
+  production:
+    target: "https://www.xyz.com"
+  staging:
+    target: "https://staging.xyz.com"
+  development:
+    target: "http://localhost:3000"

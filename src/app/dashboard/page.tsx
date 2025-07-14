@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Event, Judge } from "@prisma/client";
 import Link from "next/link";
-import { PlusCircle, Users, Gavel } from "lucide-react";
+import { PlusCircle, Users, Gavel, Activity } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ManageAccessModal } from "@/components/ManageAccessModal";
 import { Badge } from "@/components/ui/badge";
@@ -92,10 +92,18 @@ export default function DashboardPage() {
       <div className="container mx-auto py-10 px-4">
         <div className="flex justify-between items-center mb-8">
             <h1 className="text-3xl font-bold">My Events</h1>
-            <Button onClick={handleCreateEventClick} className="bg-orange-500 hover:bg-orange-600 text-white">
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Create Event
-            </Button>
+            <div className="flex gap-2">
+                <Link href="/dashboard/monitor">
+                    <Button variant="outline" className="border-gray-600 hover:bg-gray-800">
+                        <Activity className="h-4 w-4 mr-2" />
+                        System Monitor
+                    </Button>
+                </Link>
+                <Button onClick={handleCreateEventClick} className="bg-orange-500 hover:bg-orange-600 text-white">
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    Create Event
+                </Button>
+            </div>
         </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {events.map((event) => {
