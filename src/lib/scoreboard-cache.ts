@@ -54,7 +54,14 @@ class ScoreboardCache {
     }
     
     // Check if cache is still valid
-    if (Date.now() - cached.timestamp > this.CACHE_TTL) {
+    const cacheAge = Date.now() - cached.timestamp;
+    if (cacheAge > this.CACHE_TTL) {
+      console.log(`🗑️ Cache expired for event ${eventId}`, {
+        cacheAge: `${cacheAge}ms`,
+        ttl: `${this.CACHE_TTL}ms`,
+        cachedTime: new Date(cached.timestamp).toISOString(),
+        currentTime: new Date().toISOString()
+      });
       this.cache.delete(eventId);
       this.stats.totalCacheMisses++;
       return null;

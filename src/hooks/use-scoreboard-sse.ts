@@ -100,7 +100,7 @@ export function useScoreboardSSE({ eventId, enabled = true }: UseScoreboardSSEOp
       }
     }, 10000); // Poll every 10 seconds
     
-  }, [eventId, enabled]);
+  }, [eventId, enabled, connectionType, isConnected]);
 
   // Stop polling
   const stopPolling = useCallback(() => {
@@ -131,12 +131,18 @@ export function useScoreboardSSE({ eventId, enabled = true }: UseScoreboardSSEOp
     let sseConnected = false;
     
     // Set a timeout to fallback to polling if SSE doesn't connect
-    // Use longer timeout to give SSE more time to establish
-    const timeoutMs = 15000; // 15 seconds should be enough for most cases
+    // Use shorter timeout now that we have better connection confirmation
+    const timeoutMs = 8000; // 8 seconds should be enough with immediate ping
     
     const connectionTimeout = setTimeout(() => {
       if (!sseConnected) {
         console.log(`⏰ SSE connection timeout after ${timeoutMs}ms, falling back to polling`);
+        console.log('🔍 Timezone debug info:', {
+          clientTime: new Date().toISOString(),
+          clientTimestamp: Date.now(),
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          timezoneName: new Date().toLocaleString('en-US', { timeZoneName: 'long' })
+        });
         eventSource.close();
         eventSourceRef.current = null;
         setError('SSE connection timeout, using polling mode');
@@ -189,6 +195,49 @@ export function useScoreboardSSE({ eventId, enabled = true }: UseScoreboardSSEOp
       }
     };
 
+    // Handle custom events (like connection confirmation)
+    eventSource.addEventListener('connected', (event) => {
+      const connectionData = JSON.parse(event.data);
+      const clientTime = new Date().toISOString();
+      const timeDiff = Date.now() - connectionData.timestamp;
+      
+      console.log('🟢 SSE connection event received:', {
+        ...connectionData,
+        clientTime,
+        timeDiff: `${timeDiff}ms`,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      });
+      
+      sseConnected = true;
+      setIsConnected(true);
+      setConnectionType('sse');
+      setError(null);
+      
+      // Clear the connection timeout
+      clearTimeout(connectionTimeout);
+      
+      // Clear any reconnection timeout
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+    });
+
+    eventSource.addEventListener('ping', (event) => {
+      console.log('🏓 SSE ping received:', event.data);
+      // Make sure we're still connected
+      if (!sseConnected) {
+        sseConnected = true;
+        setIsConnected(true);
+        setConnectionType('sse');
+        setError(null);
+        console.log('🟢 SSE connection confirmed via ping');
+      }
+    });
+
+    eventSource.addEventListener('error', (event) => {
+      console.log('🔴 SSE error event received:', event);
+    });
+
     eventSource.onerror = () => {
       console.log('🔴 SSE connection error or lost');
       
@@ -228,7 +277,7 @@ export function useScoreboardSSE({ eventId, enabled = true }: UseScoreboardSSEOp
       }
     };
 
-  }, [eventId, enabled, connectionType, stopPolling, startPolling]);
+  }, [eventId, enabled, stopPolling, startPolling]);
 
   // Manual refresh function
   const refresh = useCallback(async () => {
