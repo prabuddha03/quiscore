@@ -16,21 +16,22 @@ export async function GET(
     async start(controller) {
       console.log(`📡 SSE client connected for event: ${eventId}`);
 
-      // Send connection established message first
+      // Send connection established message first with minimal padding to force flush
       const serverTimestamp = Date.now();
-      const connectionMsg = `event: connected\ndata: {"status": "connected", "eventId": "${eventId}", "serverTime": "${new Date().toISOString()}", "timestamp": ${serverTimestamp}}\n\n`;
+      const padding = ' '.repeat(512); // 512B padding to force proxy flush (lighter)
+      const connectionMsg = `event: connected\ndata: {"status": "connected", "eventId": "${eventId}", "timestamp": ${serverTimestamp}}\n\n${padding}\n\n`;
       controller.enqueue(new TextEncoder().encode(connectionMsg));
-      console.log(`📡 SSE connection confirmation sent for event: ${eventId} at ${new Date().toISOString()}`);
+      console.log(`📡 SSE connection confirmation sent for event: ${eventId}`);
 
-      // Send immediate ping to ensure connection is working
+      // Send single ping to test connection (lightweight)
       setTimeout(() => {
         try {
-          controller.enqueue(new TextEncoder().encode(`event: ping\ndata: {"ping": "pong", "serverTime": "${new Date().toISOString()}"}\n\n`));
+          controller.enqueue(new TextEncoder().encode(`event: ping\ndata: {"ping": "pong"}\n\n`));
           console.log(`📡 SSE ping sent for event: ${eventId}`);
         } catch (error) {
           console.error('Error sending SSE ping:', error);
         }
-      }, 100); // Send ping after 100ms
+      }, 200); // Single ping after 200ms
 
       // Send initial data if available in cache
       const sendInitialData = async () => {
@@ -67,18 +68,19 @@ export async function GET(
         }
       });
 
-      // Send heartbeat every 30 seconds to keep connection alive
+      // Send heartbeat every 15 seconds to keep connection alive (lighter)
       const heartbeatInterval = setInterval(() => {
         try {
-          controller.enqueue(new TextEncoder().encode(`: heartbeat\n\n`));
+          const heartbeatMsg = `: heartbeat\n\n`;
+          controller.enqueue(new TextEncoder().encode(heartbeatMsg));
           console.log(`💓 SSE heartbeat sent for event: ${eventId}`);
         } catch (error) {
-          // Connection closed, cleanup
+          // Connection closed, cleanup immediately
           console.log(`💔 SSE heartbeat failed for event: ${eventId}, cleaning up`);
           clearInterval(heartbeatInterval);
           unsubscribe();
         }
-      }, 30000);
+      }, 15000); // Lighter heartbeat frequency
 
       // Store cleanup function for when connection closes
       (request as NextRequest & { cleanup?: () => void }).cleanup = () => {
@@ -99,14 +101,29 @@ export async function GET(
 
   return new Response(stream, {
     headers: {
-      'Content-Type': 'text/event-stream',
+      'Content-Type': 'text/event-stream; charset=utf-8',
       'Cache-Control': 'no-cache, no-store, must-revalidate',
       'Connection': 'keep-alive',
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Headers': 'Cache-Control',
       'Access-Control-Allow-Credentials': 'true',
+      
+      // DigitalOcean App Platform specific headers
       'X-Accel-Buffering': 'no', // Disable nginx buffering
+      'X-Proxy-Buffering': 'no', // Alternative nginx header
+      'Proxy-Buffering': 'no', // Generic proxy header
+      'X-Nginx-Proxy': 'no-buffer', // Specific nginx instruction
+      
+      // Force streaming
       'Content-Encoding': 'identity', // Prevent gzip compression
+      'Transfer-Encoding': 'chunked', // Force chunked encoding
+      'X-Content-Type-Options': 'nosniff', // Prevent MIME type sniffing
+      'Expires': '0', // Prevent caching
+      'Pragma': 'no-cache', // HTTP/1.0 compatibility
+      
+      // App Platform specific
+      'X-Vercel-No-Cache': '1', // Works for similar platforms
+      'X-Robots-Tag': 'noindex, nofollow', // Prevent indexing
     },
   });
 } 
