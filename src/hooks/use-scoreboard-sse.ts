@@ -57,7 +57,7 @@ export function useScoreboardSSE({ eventId, enabled = true }: UseScoreboardSSEOp
     }
   }, [eventId]);
 
-  // HTTP Polling fallback
+  // HTTP Polling fallback (lightweight, no Socket.IO)
   const startPolling = useCallback(() => {
     if (!eventId || !enabled) {
       console.log('🔄 Cannot start polling - missing eventId or disabled');
@@ -70,7 +70,7 @@ export function useScoreboardSSE({ eventId, enabled = true }: UseScoreboardSSEOp
       return;
     }
     
-    console.log(`🔄 Starting HTTP polling for event: ${eventId}`);
+    console.log(`🔄 Starting lightweight HTTP polling for event: ${eventId}`);
     setConnectionType('polling');
     setIsConnected(true);
     setError(null);
@@ -80,11 +80,21 @@ export function useScoreboardSSE({ eventId, enabled = true }: UseScoreboardSSEOp
       clearInterval(pollingIntervalRef.current);
     }
     
-    // Poll every 10 seconds (more conservative than SSE)
+    // Optimized polling: faster for production, slower for development
+    const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('ondigitalocean.app');
+    const pollInterval = isProduction ? 5000 : 10000; // 5s prod, 10s dev
+    
     pollingIntervalRef.current = setInterval(async () => {
       console.log(`🔄 Polling scoreboard for event: ${eventId}`);
       try {
-        const response = await fetch(`/api/scoreboard/${eventId}`);
+        const response = await fetch(`/api/scoreboard/${eventId}`, {
+          method: 'GET',
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Accept': 'application/json',
+          }
+        });
+        
         if (!response.ok) {
           throw new Error(`Polling failed: ${response.status}`);
         }
@@ -92,13 +102,13 @@ export function useScoreboardSSE({ eventId, enabled = true }: UseScoreboardSSEOp
         const data = await response.json();
         setScoreboard(data);
         setLastUpdateTime(new Date());
-        console.log('📊 Scoreboard updated via polling');
+        console.log('📊 Scoreboard updated via lightweight polling');
       } catch (err) {
         console.error('❌ Polling error:', err);
         setError(`Polling error: ${err instanceof Error ? err.message : 'Unknown error'}`);
         // Don't disconnect on single polling failure, but log it
       }
-    }, 10000); // Poll every 10 seconds
+    }, pollInterval);
     
   }, [eventId, enabled, connectionType, isConnected]);
 
@@ -131,8 +141,17 @@ export function useScoreboardSSE({ eventId, enabled = true }: UseScoreboardSSEOp
     let sseConnected = false;
     
     // Set a timeout to fallback to polling if SSE doesn't connect
-    // Use shorter timeout now that we have better connection confirmation
-    const timeoutMs = 8000; // 8 seconds should be enough with immediate ping
+    // Use very short timeout in production to minimize resource waste
+    const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('ondigitalocean.app');
+    const timeoutMs = isProduction ? 1000 : 5000; // 1s prod, 5s dev - minimize wasted resources
+    
+    console.log(`🔌 SSE connection attempt (${isProduction ? 'production' : 'development'} mode, ${timeoutMs}ms timeout)`);
+    console.log(`🔍 Platform info:`, {
+      hostname: typeof window !== 'undefined' ? window.location.hostname : 'unknown',
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+      isProduction,
+      protocol: typeof window !== 'undefined' ? window.location.protocol : 'unknown'
+    });
     
     const connectionTimeout = setTimeout(() => {
       if (!sseConnected) {
@@ -141,7 +160,9 @@ export function useScoreboardSSE({ eventId, enabled = true }: UseScoreboardSSEOp
           clientTime: new Date().toISOString(),
           clientTimestamp: Date.now(),
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          timezoneName: new Date().toLocaleString('en-US', { timeZoneName: 'long' })
+          timezoneName: new Date().toLocaleString('en-US', { timeZoneName: 'long' }),
+          hostname: window.location.hostname,
+          isProduction
         });
         eventSource.close();
         eventSourceRef.current = null;
@@ -198,14 +219,12 @@ export function useScoreboardSSE({ eventId, enabled = true }: UseScoreboardSSEOp
     // Handle custom events (like connection confirmation)
     eventSource.addEventListener('connected', (event) => {
       const connectionData = JSON.parse(event.data);
-      const clientTime = new Date().toISOString();
       const timeDiff = Date.now() - connectionData.timestamp;
       
       console.log('🟢 SSE connection event received:', {
-        ...connectionData,
-        clientTime,
+        eventId: connectionData.eventId,
         timeDiff: `${timeDiff}ms`,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        status: connectionData.status
       });
       
       sseConnected = true;
@@ -222,8 +241,8 @@ export function useScoreboardSSE({ eventId, enabled = true }: UseScoreboardSSEOp
       }
     });
 
-    eventSource.addEventListener('ping', (event) => {
-      console.log('🏓 SSE ping received:', event.data);
+    eventSource.addEventListener('ping', () => {
+      console.log('🏓 SSE ping received');
       // Make sure we're still connected
       if (!sseConnected) {
         sseConnected = true;
