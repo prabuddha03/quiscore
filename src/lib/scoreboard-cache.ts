@@ -195,7 +195,6 @@ class ScoreboardCache {
               t."eventId",
               t.id,
               t.name,
-              t.players,
               t."documentLink",
               COALESCE(SUM(s.points), 0)::integer as total_score,
               COUNT(DISTINCT s.id)::integer as scores_count,
@@ -212,7 +211,7 @@ class ScoreboardCache {
             FROM "Team" t
             LEFT JOIN "Score" s ON t.id = s."teamId"
             WHERE t."eventId" = ANY(${eventsToFetch})
-            GROUP BY t."eventId", t.id, t.name, t.players, t."documentLink"
+            GROUP BY t."eventId", t.id, t.name, t."documentLink"
             ORDER BY t."eventId", total_score DESC, t.name ASC
           `,
           `scoreboard-batch-${eventsToFetch.length}`,
@@ -229,7 +228,6 @@ class ScoreboardCache {
           eventGroups[eventId].push({
             id: team.id,
             name: team.name,
-            players: team.players,
             documentLink: team.documentlink,
             totalScore: team.total_score,
             scoresCount: team.scores_count,

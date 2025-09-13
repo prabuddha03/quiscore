@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Event, Team, Round, Judge, Criteria, Score, Prisma } from "@prisma/client";
+import { Event, Team, Round, Judge, Criteria, Score, Participant, Participation } from "@prisma/client";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { TeamScoreFormModal } from "./TeamScoreFormModal";
@@ -15,9 +15,12 @@ import { Input } from "@/components/ui/input";
 type RoundWithCriteriaAndScores = Round & { 
     criteria: (Criteria & { scores: Score[] })[] 
 };
-type TeamWithPlayers = Omit<Team, 'players'> & { players: Prisma.JsonValue };
+type TeamWithParticipants = Team & { 
+  participants?: Participant[];
+  participations?: (Participation & { participant: Participant })[];
+};
 type EventForJudging = Event & {
-  teams: TeamWithPlayers[];
+  teams: TeamWithParticipants[];
   rounds: RoundWithCriteriaAndScores[];
   judges: Judge[];
 };
@@ -29,7 +32,7 @@ interface JudgeScoringPanelProps {
 
 export function JudgeScoringPanel({ event, judgeId }: JudgeScoringPanelProps) {
   const [openAccordionId, setOpenAccordionId] = useState<string | undefined>(event.rounds[0]?.id);
-  const [selectedTeam, setSelectedTeam] = useState<TeamWithPlayers | null>(null);
+  const [selectedTeam, setSelectedTeam] = useState<TeamWithParticipants | null>(null);
   const [selectedRound, setSelectedRound] = useState<RoundWithCriteriaAndScores | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
@@ -65,7 +68,7 @@ export function JudgeScoringPanel({ event, judgeId }: JudgeScoringPanelProps) {
     ? fuse.search(searchQuery).map(result => result.item)
     : event.teams;
 
-  const handleOpenModal = (team: TeamWithPlayers, round: RoundWithCriteriaAndScores) => {
+  const handleOpenModal = (team: TeamWithParticipants, round: RoundWithCriteriaAndScores) => {
     setSelectedTeam(team);
     setSelectedRound(round);
   };

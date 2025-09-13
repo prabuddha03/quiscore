@@ -22,22 +22,48 @@ export async function GET() {
 
     const userEmail = session.user.email;
 
-    // Get all events where the user is either the creator, an allowed editor, or a judge.
-    const events = await prisma.event.findMany({
-      where: {
-        OR: [
-          { createdBy: user.id },
-          { allowedEditors: { has: userEmail } },
-          { judges: { some: { email: userEmail } } },
-        ],
-      },
-      include: {
-        judges: true, // Include judge details for the frontend
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+    // Admin emails that can see all events
+    const adminEmails = [
+      'brsnprsnl@gmail.com',
+      'prabuddha.chowdhury@gmail.com', 
+      'pragyatheofficialquizclubuem@gmail.com',
+      'dipanjandhar18@gmail.com'
+    ];
+
+    const isAdmin = adminEmails.includes(userEmail);
+
+    let events;
+
+    if (isAdmin) {
+      // Admin users see all events
+      events = await prisma.event.findMany({
+        include: {
+          judges: true, // Include judge details for the frontend
+          createdByUser: true, // Include creator details
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+    } else {
+      // Regular users see only events they have access to
+      events = await prisma.event.findMany({
+        where: {
+          OR: [
+            { createdBy: user.id },
+            { allowedEditors: { has: userEmail } },
+            { judges: { some: { email: userEmail } } },
+          ],
+        },
+        include: {
+          judges: true, // Include judge details for the frontend
+          createdByUser: true, // Include creator details
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+    }
 
     return NextResponse.json(events);
   } catch (error) {

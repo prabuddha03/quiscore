@@ -12,6 +12,12 @@ interface TeamData {
     [key: string]: string | undefined;
 }
 
+interface ParticipantData {
+    name: string;
+    email?: string;
+    phone: string;
+}
+
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session || !session.user?.email) {
@@ -54,7 +60,18 @@ export async function POST(req: Request) {
       });
     }
 
-    if (user.category === "FREE") {
+    // Admin emails that have unlimited event creation
+    const adminEmails = [
+      'brsnprsnl@gmail.com',
+      'prabuddha.chowdhury@gmail.com', 
+      'pragyatheofficialquizclubuem@gmail.com',
+      'dipanjandhar18@gmail.com'
+    ];
+
+    const isAdmin = adminEmails.includes(session.user.email);
+
+    // Only apply event limit to non-admin FREE users
+    if (user.category === "FREE" && !isAdmin) {
       const eventCount = await prisma.event.count({
         where: { createdBy: user.id },
       });
@@ -81,6 +98,16 @@ export async function POST(req: Request) {
       eventData.teams = {
         create: Array.from({ length: teams }, (_, i) => ({
           name: `Team ${i + 1}`,
+          participations: {
+            create: [{
+              participant: {
+                create: {
+                  name: `Participant ${i + 1}`,
+                  phone: 'N/A'
+                }
+              }
+            }]
+          }
         })),
       };
     } else if (type === 'GENERAL') {
@@ -89,28 +116,61 @@ export async function POST(req: Request) {
       if (teamsData && teamsData.length > 0) {
         eventData.teams = {
           create: teamsData.map((team: TeamData) => {
-            const players: { name: string }[] = [];
-            // Aggregate all member columns into a players array
+            const participants: ParticipantData[] = [];
+            // Aggregate all member columns into a participants array
             Object.keys(team).forEach(key => {
               if (key.startsWith('member_') && team[key]) {
-                players.push({ name: team[key]! });
+                participants.push({ 
+                  name: team[key]!, 
+                  phone: team.leader_contact || 'N/A' // Use leader contact as default phone
+                });
               }
             });
+
+            // Add leader as participant if provided
+            if (team.leader_name) {
+              participants.push({
+                name: team.leader_name,
+                email: team.leader_contact?.includes('@') ? team.leader_contact : undefined,
+                phone: team.leader_contact || 'N/A'
+              });
+            }
+
+            // Ensure at least one participant exists
+            if (participants.length === 0) {
+              participants.push({
+                name: 'Participant 1',
+                phone: 'N/A'
+              });
+            }
 
             return {
               name: team.team_name,
               documentLink: team.document_link || null,
-              players: {
-                members: players,
-                leader: (team.leader_name || team.leader_contact) ? { name: team.leader_name, contact: team.leader_contact } : undefined
-              },
+              participations: {
+                create: participants.map(participant => ({
+                  participant: {
+                    create: participant
+                  }
+                }))
+              }
             };
           })
         };
       } else if (teams > 0) {
         eventData.teams = {
           create: Array.from({ length: teams }, (_, i) => ({
-            name: `Participant ${i + 1}`,
+            name: `Team ${i + 1}`,
+            participations: {
+              create: [{
+                participant: {
+                  create: {
+                    name: `Participant ${i + 1}`,
+                    phone: 'N/A'
+                  }
+                }
+              }]
+            }
           })),
         };
       }
@@ -119,7 +179,15 @@ export async function POST(req: Request) {
     const event = await prisma.event.create({
       data: eventData,
       include: {
-        teams: true,
+        teams: {
+          include: {
+            participations: {
+              include: {
+                participant: true
+              }
+            }
+          }
+        },
       }
     });
 
@@ -133,7 +201,15 @@ export async function POST(req: Request) {
 export async function GET() {
   const events = await prisma.event.findMany({
     include: {
-      teams: true,
+      teams: {
+        include: {
+          participations: {
+            include: {
+              participant: true
+            }
+          }
+        }
+      },
       createdByUser: true,
     }
   });

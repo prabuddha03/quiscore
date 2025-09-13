@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { scoreboardCache } from "@/lib/scoreboard-cache";
+import { calculateParticipationScores } from "@/lib/leaderboard-utils";
 
 const scoreSchema = z.object({
   teamId: z.string(),
@@ -83,7 +84,10 @@ export async function POST(req: Request) {
         // Force refresh scoreboard cache and broadcast to SSE clients
         await scoreboardCache.calculateAndCache(round.eventId, true);
         
-        console.log(`📡 Scoreboard updated and broadcasted for event ${round.eventId}`);
+        // Calculate team ranks and participation scores for leaderboard
+        await calculateParticipationScores(round.eventId);
+        
+        console.log(`📡 Scoreboard and leaderboard updated for event ${round.eventId}`);
       } catch (error) {
         console.error('Error broadcasting scoreboard update:', error);
         // Don't fail the request if broadcasting fails
