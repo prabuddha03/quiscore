@@ -70,7 +70,7 @@ enum EventType {
 }
 
 model Event {
-    id             String    @id @default(cuid())
+    id             String          @id @default(cuid())
     name           String
     type           EventType
     subType        String? // "judge_based_individual" or "general_scoring"
@@ -79,7 +79,8 @@ model Event {
     rounds         Round[]
     judges         Judge[]
     createdBy      String
-    createdAt      DateTime  @default(now())
+    createdAt      DateTime        @default(now())
+    participations Participation[]
 
     createdByUser User @relation(fields: [createdBy], references: [id])
 }
@@ -96,14 +97,38 @@ model Judge {
 }
 
 model Team {
-    id           String  @id @default(cuid())
-    name         String
-    players      Json?
-    documentLink String?
-    remarks      String?
-    event        Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
-    eventId      String
-    scores       Score[]
+    id             String          @id @default(cuid())
+    name           String
+    documentLink   String?
+    remarks        String?
+    event          Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+    eventId        String
+    scores         Score[]
+    participations Participation[]
+}
+
+model Participant {
+    id                      String                   @id @default(cuid())
+    name                    String
+    email                   String?
+    phone                   String
+    participations          Participation[]
+    leaderboardParticipants LeaderboardParticipant[]
+}
+
+model Participation {
+    id                       String                  @id @default(cuid())
+    participant              Participant?            @relation(fields: [participantId], references: [id])
+    participantId            String?
+    externalId               String?
+    team                     Team?                   @relation(fields: [teamId], references: [id])
+    teamId                   String?
+    event                    Event?                  @relation(fields: [eventId], references: [id])
+    eventId                  String?
+    score                    Int?
+    teamRank                 Int? // Rank of the team in the event (1st, 2nd, 3rd, etc.)
+    leaderboardParticipant   LeaderboardParticipant? @relation(fields: [leaderboardParticipantId], references: [id])
+    leaderboardParticipantId String?
 }
 
 model Round {
@@ -149,4 +174,28 @@ model Score {
 
     @@unique([teamId, questionId])
     @@unique([teamId, criteriaId, judgeId])
+}
+
+model Leaderboard {
+    id           String                   @id @default(cuid())
+    name         String // Name of the leaderboard (e.g., "Quiz Championship 2024")
+    eventIds     String[] // Array of event IDs to include in this leaderboard
+    participants LeaderboardParticipant[] // All participants in this leaderboard
+    createdAt    DateTime                 @default(now())
+    updatedAt    DateTime                 @updatedAt
+}
+
+model LeaderboardParticipant {
+    id             String          @id @default(cuid())
+    leaderboardId  String
+    leaderboard    Leaderboard     @relation(fields: [leaderboardId], references: [id], onDelete: Cascade)
+    participantId  String
+    participant    Participant     @relation(fields: [participantId], references: [id], onDelete: Cascade)
+    totalScore     Int             @default(0) // Sum of all participation scores for this participant
+    participations Participation[] // All participations for this participant in the leaderboard events
+    rank           Int? // Rank in this leaderboard (1st, 2nd, 3rd, etc.)
+    createdAt      DateTime        @default(now())
+    updatedAt      DateTime        @updatedAt
+
+    @@unique([leaderboardId, participantId])
 }

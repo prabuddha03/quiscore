@@ -1,10 +1,14 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Team, Score, Prisma } from "@prisma/client";
+import { Team, Score, Participant, Participation } from "@prisma/client";
 import { motion } from 'framer-motion';
 
-type TeamWithScores = Omit<Team, 'players'> & { scores: Score[]; players: Prisma.JsonValue };
+type TeamWithScores = Team & { 
+  scores: Score[]; 
+  participants?: Participant[];
+  participations?: (Participation & { participant: Participant })[];
+};
 
 interface LiveScoreboardProps {
     teams: TeamWithScores[];

@@ -2,15 +2,17 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { Event, Team, Round, Judge, Criteria, Score, Prisma } from "@prisma/client";
+import { Event, Team, Round, Judge, Criteria, Score, Participant, Participation } from "@prisma/client";
 import { JudgeScoringPanel } from "@/components/event/JudgeScoringPanel";
 
 type RoundWithCriteria = Round & { 
     criteria: (Criteria & { scores: Score[] })[] 
 };
-type TeamWithPlayers = Omit<Team, 'players'> & { players: Prisma.JsonValue };
+type TeamWithParticipations = Team & { 
+  participations?: (Participation & { participant: Participant })[];
+};
 type EventForJudging = Event & {
-  teams: TeamWithPlayers[];
+  teams: TeamWithParticipations[];
   rounds: RoundWithCriteria[];
   judges: Judge[];
 };
@@ -19,7 +21,15 @@ async function getEventForJudging(eventId: string): Promise<EventForJudging | nu
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     include: {
-      teams: true,
+      teams: {
+        include: {
+          participations: {
+            include: {
+              participant: true
+            }
+          }
+        }
+      },
       rounds: {
         include: {
           criteria: {

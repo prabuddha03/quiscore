@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Event, Round, Question, Team, Score, Judge, Criteria, Prisma } from "@prisma/client";
+import { Event, Round, Question, Team, Score, Judge, Criteria, Participant, Participation } from "@prisma/client";
 import { RoundForm } from "@/components/RoundForm";
 import { QuestionInput } from "@/components/QuestionInput";
 import { RoundScoreModal } from "@/components/RoundScoreModal";
@@ -37,7 +37,11 @@ import { GeneralScoreMatrix } from "@/components/event/GeneralScoreMatrix";
 type QuestionWithScores = Question & { scores: Score[] };
 type CriteriaWithScores = Criteria & { scores: Score[] };
 type RoundWithDetails = Round & { questions: QuestionWithScores[]; criteria: CriteriaWithScores[] };
-type TeamWithScores = Omit<Team, 'players'> & { scores: Score[]; players: Prisma.JsonValue };
+type TeamWithScores = Team & { 
+  scores: Score[]; 
+  participants?: Participant[];
+  participations?: (Participation & { participant: Participant })[];
+};
 type EventWithRelations = Event & {
   teams: TeamWithScores[];
   rounds: RoundWithDetails[];
@@ -137,7 +141,7 @@ export default function EventAdminPage({
     const res = await fetch(`/api/event/${id}`);
     if (res.ok) {
       const data = await res.json();
-      // The players object is now passed directly.
+      // The participants data is now passed directly.
       // The EditTeamModal will handle parsing.
       setEvent(data);
     }

@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Team, Round, Criteria, Score, Prisma } from "@prisma/client";
+import { Team, Round, Criteria, Score, Participant, Participation } from "@prisma/client";
 import { toast } from "sonner";
 import { Badge } from "../ui/badge";
 import { Textarea } from "../ui/textarea";
@@ -13,12 +13,15 @@ import { Textarea } from "../ui/textarea";
 type RoundWithCriteriaAndScores = Round & { 
     criteria: (Criteria & { scores: Score[] })[] 
 };
-type TeamWithPlayers = Omit<Team, 'players'> & { players: Prisma.JsonValue };
+type TeamWithParticipants = Team & { 
+  participants?: Participant[];
+  participations?: (Participation & { participant: Participant })[];
+};
 
 interface TeamScoreFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  team: TeamWithPlayers;
+  team: TeamWithParticipants;
   round: RoundWithCriteriaAndScores;
   judgeId: string;
   eventId: string;
@@ -103,9 +106,9 @@ export function TeamScoreFormModal({ isOpen, onClose, team, round, judgeId }: Te
     }
   };
 
-  const playersData = team.players as { members?: { name: string }[], leader?: { name: string } };
-  const teamMembers = playersData?.members?.map((m) => m.name) || [];
-  const teamLeader = playersData?.leader?.name || 'N/A';
+  const participants = team.participants || [];
+  const teamMembers = participants.map(p => p.name);
+  const teamLeader = participants[0]?.name || 'N/A';
 
 
   return (
@@ -121,7 +124,9 @@ export function TeamScoreFormModal({ isOpen, onClose, team, round, judgeId }: Te
                 <p><span className="font-medium text-gray-400">Leader:</span> {teamLeader}</p>
                 <div className="flex flex-wrap gap-2">
                     <span className="font-medium text-gray-400">Members:</span>
-                    {teamMembers.map((name: string) => <Badge key={name} variant="secondary">{name}</Badge>)}
+                    {teamMembers.map((name: string, index: number) => (
+                      <Badge key={`${name}-${index}`} variant="secondary">{name}</Badge>
+                    ))}
                 </div>
                  {team.documentLink && (
                     <a href={team.documentLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-400 hover:underline">

@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuthModal } from "@/context/AuthModalContext";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, Trophy } from "lucide-react";
 import Link from "next/link";
 
 export function UserAuth() {
@@ -63,6 +63,12 @@ export function UserAuth() {
             <Link href="/dashboard">
                 <User className="mr-2 h-4 w-4" />
                 <span>Dashboard</span>
+            </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild className="cursor-pointer hover:!bg-gray-800">
+            <Link href="/leaderboard">
+                <Trophy className="mr-2 h-4 w-4" />
+                <span>Leaderboard</span>
             </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator className="bg-gray-700" />
